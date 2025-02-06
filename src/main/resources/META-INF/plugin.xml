@@ -2,7 +2,7 @@
     <id>com.technology.ncode</id>
     <name>NCode</name>
     <version>1.0.0</version>
-    <vendor email="your-email@example.com" url="https://your-website.com">Your Name/Company</vendor>
+    <vendor email="your-email@example.com" url="https://your-website.com">Niveus Solutions</vendor>
     <description>
         NCode is a plugin which boost productivity of the developers.
     </description>
@@ -12,7 +12,7 @@
     </application-components>
     <actions>
         <action id="com.technology.ncode.GoogleThis" class="com.technology.ncode.GoogleThis" text="Google This!">
-            <add-to-group group-id="EditSmartGroup" anchor="first"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G"/>
         </action>
     </actions>
