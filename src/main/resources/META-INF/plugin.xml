@@ -1,19 +1,36 @@
 <idea-plugin>
+    <!-- Unique identifier for the plugin -->
     <id>com.technology.ncode</id>
+    <!-- Display name of the plugin -->
     <name>NCode</name>
     <version>1.0.0</version>
     <vendor email="your-email@example.com" url="https://your-website.com">Niveus Solutions</vendor>
     <description>
-        NCode is a plugin which boost productivity of the developers.
+        NCode is a plugin which boosts the productivity of developers.
     </description>
 
+    <!-- Application-level components, if any -->
     <application-components>
         <!-- Your application-level components if any -->
     </application-components>
+
+    <!-- Extensions provided by the plugin -->
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Notification group for the plugin -->
+        <notificationGroup id="NCode Notifications"
+                           displayType="BALLOON"
+                           key="notification.group.name"/>
+        <!-- Startup activity for the plugin -->
+        <postStartupActivity implementation="com.technology.ncode.NCodeStartupActivity"/>
+    </extensions>
+    
+    <!-- Actions provided by the plugin -->
     <actions>
+        <!-- Action to search Google from the editor popup menu -->
         <action id="com.technology.ncode.GoogleThis" class="com.technology.ncode.GoogleThis" text="Google This!">
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G"/>
         </action>
     </actions>
+
 </idea-plugin>
