@@ -31,6 +31,10 @@
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G"/>
         </action>
+        <action id="com.technology.ncode.ShowCurrentLineAction" class="com.technology.ncode.NCodeStartupActivity$ShowCurrentLineAction" text="Show Current Line Code">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift S"/>
+        </action>
     </actions>
 
 </idea-plugin>

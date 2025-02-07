@@ -12,6 +12,14 @@ import java.net.URL;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.CommonDataKeys;
+import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.editor.CaretModel;
+import com.intellij.openapi.util.TextRange;
+
 /**
  * This class implements a startup activity for the NCode plugin.
  * It displays a welcome notification when the IDE starts up.
@@ -32,7 +40,7 @@ public class NCodeStartupActivity implements StartupActivity {
     private void checkInternetConnectivity(@NotNull Project project) {
         Timer timer = new Timer(true);
         timer.scheduleAtFixedRate(new TimerTask() {
-            private boolean wasConnected = false;
+            private boolean wasConnected = true;
 
             @Override
             public void run() {
@@ -62,6 +70,24 @@ public class NCodeStartupActivity implements StartupActivity {
             return (urlConnection.getResponseCode() == HttpURLConnection.HTTP_OK);
         } catch (IOException e) {
             return false;
+        }
+    }
+
+    public static class ShowCurrentLineAction extends AnAction {
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e) {
+            Editor editor = e.getData(CommonDataKeys.EDITOR);
+            if (editor != null) {
+                CaretModel caretModel = editor.getCaretModel();
+                int lineNumber = caretModel.getLogicalPosition().line;
+                Document document = editor.getDocument();
+                String lineText = document.getText(
+                        new TextRange(document.getLineStartOffset(lineNumber), document.getLineEndOffset(lineNumber)));
+                NotificationGroupManager.getInstance()
+                        .getNotificationGroup("NCode Notifications")
+                        .createNotification("Current Line Code", lineText, NotificationType.INFORMATION)
+                        .notify(e.getProject());
+            }
         }
     }
 }
