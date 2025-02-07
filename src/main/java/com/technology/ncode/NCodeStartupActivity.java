@@ -74,20 +74,38 @@ public class NCodeStartupActivity implements StartupActivity {
     }
 
     public static class ShowCurrentLineAction extends AnAction {
+        private static final int CONTEXT_WINDOW_LINES = 10;
+
         @Override
         public void actionPerformed(@NotNull AnActionEvent e) {
             Editor editor = e.getData(CommonDataKeys.EDITOR);
             if (editor != null) {
-                CaretModel caretModel = editor.getCaretModel();
-                int lineNumber = caretModel.getLogicalPosition().line;
-                Document document = editor.getDocument();
-                String lineText = document.getText(
-                        new TextRange(document.getLineStartOffset(lineNumber), document.getLineEndOffset(lineNumber)));
-                NotificationGroupManager.getInstance()
-                        .getNotificationGroup("NCode Notifications")
-                        .createNotification("Current Line Code", lineText, NotificationType.INFORMATION)
-                        .notify(e.getProject());
+                String surroundingLines = getSurroundingLines(editor);
+                notifyUser(e.getProject(), "Surrounding Lines Code", surroundingLines);
             }
+        }
+
+        private String getSurroundingLines(Editor editor) {
+            CaretModel caretModel = editor.getCaretModel();
+            int currentLine = caretModel.getLogicalPosition().line;
+            Document document = editor.getDocument();
+            int startLine = Math.max(0, currentLine - CONTEXT_WINDOW_LINES);
+            int endLine = Math.min(document.getLineCount() - 1, currentLine + CONTEXT_WINDOW_LINES);
+
+            StringBuilder lines = new StringBuilder();
+            for (int i = startLine; i <= endLine; i++) {
+                lines.append(
+                        document.getText(new TextRange(document.getLineStartOffset(i), document.getLineEndOffset(i))));
+                lines.append("\n");
+            }
+            return lines.toString();
+        }
+
+        private void notifyUser(Project project, String title, String content) {
+            NotificationGroupManager.getInstance()
+                    .getNotificationGroup("NCode Notifications")
+                    .createNotification(title, content, NotificationType.INFORMATION)
+                    .notify(project);
         }
     }
 }
