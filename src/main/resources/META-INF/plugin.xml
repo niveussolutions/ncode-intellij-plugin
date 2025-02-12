@@ -22,6 +22,7 @@
                            key="notification.group.name"/>
         <!-- Startup activity for the plugin -->
         <postStartupActivity implementation="com.technology.ncode.NCodeStartupActivity"/>
+        <typedHandler implementation="com.technology.ncode.NCodeInlineCompletionProvider"/>
     </extensions>
     
     <!-- Actions provided by the plugin -->
@@ -31,10 +32,11 @@
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G"/>
         </action>
-        <action id="com.technology.ncode.ShowCurrentLineAction" class="com.technology.ncode.NCodeStartupActivity$ShowCurrentLineAction" text="Show Current Line Code">
+        <action id="com.technology.ncode.ShowCurrentLineAction" class="com.technology.ncode.NCodeStartupActivity$ShowCurrentLineAction" text="Insert Hello Test">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift S"/>
         </action>
+
     </actions>
 
 </idea-plugin>
