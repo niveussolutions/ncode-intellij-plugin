@@ -22,6 +22,10 @@
                            key="notification.group.name"/>
         <!-- Startup activity for the plugin -->
         <postStartupActivity implementation="com.technology.ncode.NCodeStartupActivity"/>
+        <!-- Tool window for the Ask a Question sidebar -->
+        <toolWindow id="AskAQuestionSidebar"
+                    anchor="right"
+                    factoryClass="com.technology.ncode.AskAQuestionSidebarFactory"/>
         <typedHandler implementation="com.technology.ncode.NCodeInlineCompletionProvider"/>
     </extensions>
     
@@ -36,7 +40,10 @@
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift S"/>
         </action>
-
+        <action id="com.technology.ncode.AskAQuestion" class="com.technology.ncode.AskAQuestion" text="Ask a question!">
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt Q"/>
+        </action>
     </actions>
 
 </idea-plugin>
