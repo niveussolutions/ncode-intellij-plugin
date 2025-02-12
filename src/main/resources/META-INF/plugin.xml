@@ -22,6 +22,10 @@
                            key="notification.group.name"/>
         <!-- Startup activity for the plugin -->
         <postStartupActivity implementation="com.technology.ncode.NCodeStartupActivity"/>
+        <!-- Tool window for the Ask a Question sidebar -->
+        <toolWindow id="AskAQuestionSidebar"
+                    anchor="right"
+                    factoryClass="com.technology.ncode.AskAQuestionSidebarFactory"/>
     </extensions>
     
     <!-- Actions provided by the plugin -->
