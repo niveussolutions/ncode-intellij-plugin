@@ -1,5 +1,9 @@
 package com.technology.ncode;
 
+import com.google.cloud.vertexai.api.Candidate;
+import com.google.cloud.vertexai.api.Content;
+import com.google.cloud.vertexai.api.GenerateContentResponse;
+import com.google.cloud.vertexai.api.SafetyRating;
 import com.intellij.codeInsight.editorActions.TypedHandlerDelegate;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
@@ -9,6 +13,7 @@ import com.intellij.psi.PsiFile;
 import java.util.Timer;
 import java.util.TimerTask;
 import org.jetbrains.annotations.NotNull;
+import java.io.IOException;
 
 public class NCodeInlineCompletionProvider extends TypedHandlerDelegate {
     // Use a Timer instance for debounce
@@ -28,14 +33,36 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate {
                     String linePrefix = documentText.substring(Math.max(0, offset - 50), offset);
                     System.out.println("Line prefix: " + linePrefix);
 
+                    // TEST THE VERTEX AI CODE HERE
+                    System.out.println("Testing Vertex AI code");
+                    InlineVertexAi inlineVertexAi = new InlineVertexAi();
+                    try {
+                        String prompt = "System.out.pri";
+                        GenerateContentResponse response = inlineVertexAi.generateContent(prompt);
+
+                        // Extract text response safely
+                        String generatedText = InlineVertexAi.extractGeneratedText(response);
+
+                        if (generatedText != null && !generatedText.isEmpty()) {
+                            System.out.println("Generated Text:\n" + generatedText);
+                        } else {
+                            System.out.println("No valid completion generated. Raw response: " + response);
+                        }
+
+                    } catch (IOException e) {
+                        System.err.println("Error calling Vertex AI: " + e.getMessage());
+                        e.printStackTrace();
+                    } catch (Exception e) {
+                        System.err.println("Unexpected error: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+
+                    System.out.println("Vertex AI code test complete");
+
                     // Check if we should show a completion
                     if (shouldShowCompletion(linePrefix)) {
-                        System.out.println("Showing completion");
                         // Compute the completion text based on the line prefix
                         String completionText = getCompletionText(linePrefix);
-                        System.out.println("Completion text: " + completionText);
-                        System.out.println("Offset: " + offset);
-
                         // Insert the completion text at the caret
                         editor.getDocument().insertString(offset, completionText);
                         // Select the inserted text so it's easy to accept/reject
