@@ -12,14 +12,6 @@ import java.net.URL;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import com.intellij.openapi.actionSystem.AnAction;
-import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.CommonDataKeys;
-import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.editor.CaretModel;
-import com.intellij.openapi.util.TextRange;
-
 /**
  * This class implements a startup activity for the NCode plugin.
  * It displays a welcome notification when the IDE starts up.
@@ -70,42 +62,6 @@ public class NCodeStartupActivity implements StartupActivity {
             return (urlConnection.getResponseCode() == HttpURLConnection.HTTP_OK);
         } catch (IOException e) {
             return false;
-        }
-    }
-
-    public static class ShowCurrentLineAction extends AnAction {
-        private static final int CONTEXT_WINDOW_LINES = 10;
-
-        @Override
-        public void actionPerformed(@NotNull AnActionEvent e) {
-            Editor editor = e.getData(CommonDataKeys.EDITOR);
-            if (editor != null) {
-                String surroundingLines = getSurroundingLines(editor);
-                notifyUser(e.getProject(), "Surrounding Lines Code", surroundingLines);
-            }
-        }
-
-        private String getSurroundingLines(Editor editor) {
-            CaretModel caretModel = editor.getCaretModel();
-            int currentLine = caretModel.getLogicalPosition().line;
-            Document document = editor.getDocument();
-            int startLine = Math.max(0, currentLine - CONTEXT_WINDOW_LINES);
-            int endLine = Math.min(document.getLineCount() - 1, currentLine + CONTEXT_WINDOW_LINES);
-
-            StringBuilder lines = new StringBuilder();
-            for (int i = startLine; i <= endLine; i++) {
-                lines.append(
-                        document.getText(new TextRange(document.getLineStartOffset(i), document.getLineEndOffset(i))));
-                lines.append("\n");
-            }
-            return lines.toString();
-        }
-
-        private void notifyUser(Project project, String title, String content) {
-            NotificationGroupManager.getInstance()
-                    .getNotificationGroup("NCode Notifications")
-                    .createNotification(title, content, NotificationType.INFORMATION)
-                    .notify(project);
         }
     }
 }
