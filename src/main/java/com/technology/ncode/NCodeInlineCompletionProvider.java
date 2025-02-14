@@ -77,25 +77,6 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate {
         int startLine = Math.max(0, currentLine - TOP_CONTEXT_LINES);
         int endLine = Math.min(document.getLineCount() - 1, currentLine + BOTTOM_CONTEXT_LINES);
 
-        // print top start lines
-        System.out.println("Start Line: " + startLine);
-
-        StringBuilder topLines = new StringBuilder();
-        for (int i = startLine; i <= currentLine; i++) {
-            topLines.append(
-                    document.getText(new TextRange(document.getLineStartOffset(i), document.getLineEndOffset(i))));
-            topLines.append("\n");
-        }
-
-        System.out.println("Bottom LInes:\n" + topLines.toString());
-        StringBuilder bottonLines = new StringBuilder();
-        for (int i = currentLine; i <= endLine; i++) {
-            bottonLines.append(
-                    document.getText(new TextRange(document.getLineStartOffset(i), document.getLineEndOffset(i))));
-            bottonLines.append("\n");
-        }
-        System.out.println("bottonLines :\n" + bottonLines.toString());
-
         StringBuilder lines = new StringBuilder();
         for (int i = startLine; i <= endLine; i++) {
             lines.append(

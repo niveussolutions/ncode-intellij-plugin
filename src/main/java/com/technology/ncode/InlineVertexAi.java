@@ -26,12 +26,12 @@ public class InlineVertexAi {
                     .build();
 
             GenerativeModel model = new GenerativeModel.Builder()
-                    .setModelName("gemini-pro")
+                    .setModelName("gemini-2.0-flash")
                     .setVertexAi(vertexAi)
                     .setGenerationConfig(generationConfig)
                     .setSystemInstruction(
                             ContentMaker.fromString(
-                                    "You are an AI specialized in inline code completion.Your task is to generate only the code snippet that best continues the given input.Do not provide any explanations, comments, or additional text.Ensure the generated code is syntactically correct and integrates seamlessly with the given context."))
+                                    "You are an AI specialized in inline code completion.Your task is to generate only the missing code snippet that correctly completes the given input.Do not repeat or modify any existing code.Ensure the completion integrates seamlessly with the provided context.Do not add extra brackets, class definitions, or method signatures if they are already present in the context."))
 
                     .build();
 
