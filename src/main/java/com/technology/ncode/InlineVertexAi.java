@@ -31,7 +31,7 @@ public class InlineVertexAi {
                     .setGenerationConfig(generationConfig)
                     .setSystemInstruction(
                             ContentMaker.fromString(
-                                    "You are an AI specialized in inline code completion.Your task is to generate only the missing code snippet that correctly completes the given input.Do not repeat or modify any existing code.Ensure the completion integrates seamlessly with the provided context.Do not add extra brackets, class definitions, or method signatures if they are already present in the context."))
+                                    "You are an AI specialized in inline code completion. Your task is to generate only the missing code snippet that correctly completes the given input. Do not repeat or modify any existing code. Ensure the completion integrates seamlessly with the provided context. Avoid adding any extraneous brackets, class definitions, or method signatures if they are already present. Provide the code snippet as plain text without any markdown formatting or code fences."))
 
                     .build();
 
