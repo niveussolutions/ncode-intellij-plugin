@@ -43,3 +43,6 @@ bin/
 .DS_Store
 
 .env*
+
+private*
+chain.crt

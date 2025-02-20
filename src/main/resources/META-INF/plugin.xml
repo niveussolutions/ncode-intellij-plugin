@@ -28,6 +28,9 @@
         <typedHandler implementation="com.technology.ncode.NCodeInlineCompletionProvider" />
     </extensions>
 
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lang</depends>
+
     <actions>
         <action id="com.technology.ncode.GoogleThis" class="com.technology.ncode.GoogleThis"
             text="Google This!">
