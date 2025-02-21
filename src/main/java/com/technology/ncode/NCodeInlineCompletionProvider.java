@@ -30,19 +30,18 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate {
                     int offset = editor.getCaretModel().getOffset();
                     // Get the surrounding lines text
                     String surroundingLines = getSurroundingLines(editor);
-
-                    // TEST THE VERTEX AI CODE HERE
+                    System.out.println("----------");
+                    System.out.println("Surrounding lines: " + surroundingLines);
+                    System.out.println("----------");
+                    // THE VERTEX AI
                     System.out.println("Testing Vertex AI code");
                     InlineVertexAi inlineVertexAi = new InlineVertexAi();
                     try {
-                        String prompt = surroundingLines;
-                        GenerateContentResponse response = inlineVertexAi.generateContent(prompt);
+                        GenerateContentResponse response = inlineVertexAi.generateContent(surroundingLines);
 
                         // Extract text response safely
                         String generatedText = InlineVertexAi.extractGeneratedText(response);
-
                         if (generatedText != null && !generatedText.isEmpty()) {
-                            System.out.println("Generated Text:\n" + generatedText);
                             // Insert the completion text at the caret
                             editor.getDocument().insertString(offset, generatedText);
                             // Select the inserted text so it's easy to accept/reject
@@ -68,21 +67,29 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate {
     }
 
     private String getSurroundingLines(Editor editor) {
-        int TOP_CONTEXT_LINES = 25;
-        int BOTTOM_CONTEXT_LINES = 25;
+        int TOP_CONTEXT_LINES = 10;
+        int BOTTOM_CONTEXT_LINES = 5;
 
         CaretModel caretModel = editor.getCaretModel();
         int currentLine = caretModel.getLogicalPosition().line;
+        int currentOffset = caretModel.getOffset();
         Document document = editor.getDocument();
         int startLine = Math.max(0, currentLine - TOP_CONTEXT_LINES);
         int endLine = Math.min(document.getLineCount() - 1, currentLine + BOTTOM_CONTEXT_LINES);
 
         StringBuilder lines = new StringBuilder();
         for (int i = startLine; i <= endLine; i++) {
-            lines.append(
-                    document.getText(new TextRange(document.getLineStartOffset(i),
-                            document.getLineEndOffset(i))));
-            lines.append("\n");
+            int lineStartOffset = document.getLineStartOffset(i);
+            int lineEndOffset = document.getLineEndOffset(i);
+            String lineText = document.getText(new TextRange(lineStartOffset, lineEndOffset));
+
+            if (i == currentLine) {
+                int caretPositionInLine = currentOffset - lineStartOffset;
+                lineText = lineText.substring(0, caretPositionInLine) + "{caret is here}"
+                        + lineText.substring(caretPositionInLine);
+            }
+
+            lines.append(lineText).append("\n");
         }
         return lines.toString();
     }
