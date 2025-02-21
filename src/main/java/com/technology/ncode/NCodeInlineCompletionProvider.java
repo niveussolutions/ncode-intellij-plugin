@@ -68,8 +68,8 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate {
     }
 
     private String getSurroundingLines(Editor editor) {
-        int TOP_CONTEXT_LINES = 10;
-        int BOTTOM_CONTEXT_LINES = 5;
+        int TOP_CONTEXT_LINES = 25;
+        int BOTTOM_CONTEXT_LINES = 25;
 
         CaretModel caretModel = editor.getCaretModel();
         int currentLine = caretModel.getLogicalPosition().line;
