@@ -2,102 +2,119 @@ package com.technology.ncode;
 
 import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.intellij.codeInsight.editorActions.TypedHandlerDelegate;
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.editor.colors.EditorColorsManager;
-import com.intellij.openapi.editor.colors.EditorColorsScheme;
-import com.intellij.openapi.editor.colors.EditorColors;
-import com.intellij.openapi.editor.markup.HighlighterLayer;
-import com.intellij.openapi.editor.markup.HighlighterTargetArea;
-import com.intellij.openapi.editor.markup.MarkupModel;
-import com.intellij.openapi.editor.markup.TextAttributes;
-import com.intellij.openapi.editor.markup.RangeHighlighter;
 import com.intellij.openapi.actionSystem.IdeActions;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
-import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiFile;
-import java.util.Timer;
-import java.util.TimerTask;
-import org.jetbrains.annotations.NotNull;
-import java.io.IOException;
 import com.intellij.openapi.editor.CaretModel;
 import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.util.TextRange;
-import java.awt.*;
-import com.intellij.openapi.Disposable;
+import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.colors.EditorColors;
+import com.intellij.openapi.editor.colors.EditorColorsManager;
+import com.intellij.openapi.editor.colors.EditorColorsScheme;
+import com.intellij.openapi.editor.markup.HighlighterLayer;
+import com.intellij.openapi.editor.markup.HighlighterTargetArea;
+import com.intellij.openapi.editor.markup.MarkupModel;
+import com.intellij.openapi.editor.markup.RangeHighlighter;
+import com.intellij.openapi.editor.markup.TextAttributes;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
-import java.util.concurrent.atomic.AtomicReference;
+import com.intellij.openapi.util.TextRange;
+import com.intellij.psi.PsiFile;
+import org.jetbrains.annotations.NotNull;
+
+import java.awt.Color;
+import java.io.IOException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implements Disposable {
-    private final Timer timer = new Timer(true); // Make it a daemon timer
-    private final AtomicReference<TimerTask> lastTask = new AtomicReference<>();
+    private static final Logger LOGGER = Logger.getLogger(NCodeInlineCompletionProvider.class.getName());
+    private static final int DEBOUNCE_DELAY_MS = 1000;
+    private static final int TOP_CONTEXT_LINES = 10;
+    private static final int BOTTOM_CONTEXT_LINES = 5;
+    private static final int HIGHLIGHTING_ALPHA = 40;
+    private static final int FOREGROUND_ALPHA = 180;
+
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread thread = new Thread(r, "NCodeCompletionThread");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private ScheduledFuture<?> pendingTask;
+
     private AnAction currentTabAction;
     private AnAction currentEscapeAction;
+    private RangeHighlighter currentHighlighter;
 
-    private String generatedTextCache = null;
+    private String generatedTextCache;
     private int generatedTextOffset = -1;
-    private int highlighterId = -1; // Keep track of highlighter ID
 
     @Override
     public @NotNull Result charTyped(char c, @NotNull Project project, @NotNull Editor editor, @NotNull PsiFile file) {
-        debounce(() -> {
-            // Schedule modifications on the EDT and wrap them in a write action
-            ApplicationManager.getApplication().invokeLater(() -> {
-                WriteCommandAction.runWriteCommandAction(project, () -> {
+        debounce(() -> processCompletion(project, editor), DEBOUNCE_DELAY_MS);
+        return Result.CONTINUE;
+    }
+
+    private void processCompletion(Project project, Editor editor) {
+        // Schedule modifications on the EDT and wrap them in a write action
+        ApplicationManager.getApplication().invokeLater(() -> {
+            WriteCommandAction.runWriteCommandAction(project, () -> {
+                try {
                     // Get the current caret offset
                     int offset = editor.getCaretModel().getOffset();
+
                     // Get the surrounding lines text
                     String surroundingLines = getSurroundingLines(editor);
-                    System.out.println("----------");
-                    System.out.println("Surrounding lines: " + surroundingLines);
-                    System.out.println("----------");
-                    // THE VERTEX AI
-                    System.out.println("Testing Vertex AI code");
-                    InlineVertexAi inlineVertexAi = new InlineVertexAi();
-                    try {
-                        GenerateContentResponse response = inlineVertexAi.generateContent(surroundingLines);
+                    LOGGER.info("Processing completion with surrounding lines: " + surroundingLines);
 
-                        // Extract text response safely
-                        String generatedText = InlineVertexAi.extractGeneratedText(response);
-                        if (generatedText != null && !generatedText.isEmpty()) {
-                            // Store the generated text and offset
-                            generatedTextCache = generatedText;
-                            generatedTextOffset = offset;
-
-                            // Insert the completion text at the caret
-                            editor.getDocument().insertString(offset, generatedText);
-
-                            // Apply transparent highlighting
-                            applyTransparentHighlighting(editor, offset, offset + generatedText.length(), editor);
-
-                            // Install custom actions for tab and escape
-                            installTabCompletionAction(editor);
-                            installEscapeAction(editor);
-
-                        } else {
-                            System.out.println("No valid completion generated. Raw response: " + response);
-                            clearCache(editor);
-                        }
-
-                    } catch (IOException e) {
-                        System.err.println("Error calling Vertex AI: " + e.getMessage());
-                        e.printStackTrace();
-                        clearCache(editor);
-                    } catch (Exception e) {
-                        System.err.println("Unexpected error: " + e.getMessage());
-                        e.printStackTrace();
-                        clearCache(editor);
-                    }
-
-                    System.out.println("Vertex AI code test complete");
-                });
+                    generateCompletion(editor, offset, surroundingLines);
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error processing completion", e);
+                    clearCache(editor);
+                }
             });
-        }, 3000); // 3000ms debounce delay
+        });
+    }
 
-        return Result.CONTINUE;
+    private void generateCompletion(Editor editor, int offset, String surroundingLines) {
+        InlineVertexAi inlineVertexAi = new InlineVertexAi();
+        try {
+            GenerateContentResponse response = inlineVertexAi.generateContent(surroundingLines);
+            String generatedText = InlineVertexAi.extractGeneratedText(response);
+
+            if (generatedText != null && !generatedText.isEmpty()) {
+                // Store the generated text and offset
+                generatedTextCache = generatedText;
+                generatedTextOffset = offset;
+
+                // Insert the completion text at the caret
+                editor.getDocument().insertString(offset, generatedText);
+
+                // Apply transparent highlighting
+                applyTransparentHighlighting(editor, offset, offset + generatedText.length());
+
+                // Install custom actions for tab and escape
+                installTabCompletionAction(editor);
+                installEscapeAction(editor);
+            } else {
+                LOGGER.warning("No valid completion generated. Raw response: " + response);
+                clearCache(editor);
+            }
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error calling Vertex AI", e);
+            clearCache(editor);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Unexpected error during completion generation", e);
+            clearCache(editor);
+        }
     }
 
     private void clearCache(Editor editor) {
@@ -106,7 +123,11 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         removeHighlighting(editor);
     }
 
-    private void applyTransparentHighlighting(Editor editor, int startOffset, int endOffset, Editor currentEditor) {
+    private void applyTransparentHighlighting(Editor editor, int startOffset, int endOffset) {
+        if (currentHighlighter != null) {
+            removeHighlighting(editor);
+        }
+
         EditorColorsScheme scheme = EditorColorsManager.getInstance().getGlobalScheme();
         TextAttributes attributes = new TextAttributes();
 
@@ -118,10 +139,10 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                     selectionColor.getRed(),
                     selectionColor.getGreen(),
                     selectionColor.getBlue(),
-                    40)); // 40 alpha for subtle background
+                    HIGHLIGHTING_ALPHA));
         } else {
             // Fallback color if selection color is not defined
-            attributes.setBackgroundColor(new Color(200, 200, 200, 40));
+            attributes.setBackgroundColor(new Color(200, 200, 200, HIGHLIGHTING_ALPHA));
         }
 
         // Set a subtle foreground color
@@ -131,24 +152,22 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                     defaultForeground.getRed(),
                     defaultForeground.getGreen(),
                     defaultForeground.getBlue(),
-                    180)); // 180 alpha for readable but subtle text
+                    FOREGROUND_ALPHA));
         }
 
         MarkupModel markupModel = editor.getMarkupModel();
-        RangeHighlighter highlighter = markupModel.addRangeHighlighter(
+        currentHighlighter = markupModel.addRangeHighlighter(
                 startOffset,
                 endOffset,
                 HighlighterLayer.SELECTION - 1,
                 attributes,
                 HighlighterTargetArea.EXACT_RANGE);
-        highlighterId = highlighter.hashCode();
     }
 
     private void removeHighlighting(Editor editor) {
-        if (highlighterId != -1) {
-            MarkupModel markupModel = editor.getMarkupModel();
-            markupModel.removeAllHighlighters();
-            highlighterId = -1;
+        if (currentHighlighter != null && currentHighlighter.isValid()) {
+            editor.getMarkupModel().removeHighlighter(currentHighlighter);
+            currentHighlighter = null;
         }
     }
 
@@ -172,7 +191,6 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                     editor.getCaretModel().moveToOffset(endPosition);
 
                     // Remove highlighting and clear cache
-                    removeHighlighting(editor);
                     clearCache(editor);
                 } else {
                     // If no suggestion is active, perform the default tab action
@@ -200,6 +218,8 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         }
 
         ActionManager actionManager = ActionManager.getInstance();
+        AnAction defaultEscapeAction = actionManager.getAction(IdeActions.ACTION_EDITOR_ESCAPE);
+
         currentEscapeAction = new AnAction() {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
@@ -209,30 +229,29 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                         WriteCommandAction.runWriteCommandAction(project, () -> {
                             try {
                                 Document document = editor.getDocument();
-                                if (generatedTextOffset + generatedTextCache.length() <= document.getTextLength()) {
-                                    document.deleteString(generatedTextOffset,
-                                            generatedTextOffset + generatedTextCache.length());
+                                int endOffset = generatedTextOffset + generatedTextCache.length();
+                                if (endOffset <= document.getTextLength()) {
+                                    document.deleteString(generatedTextOffset, endOffset);
                                 }
                             } catch (Exception ex) {
-                                System.err.println("Error removing completion text: " + ex.getMessage());
+                                LOGGER.log(Level.SEVERE, "Error removing completion text", ex);
                             } finally {
-                                removeHighlighting(editor);
                                 clearCache(editor);
                             }
                         });
                     }
+                } else if (defaultEscapeAction != null) {
+                    defaultEscapeAction.actionPerformed(e);
                 }
             }
         };
+
         currentEscapeAction.registerCustomShortcutSet(
-                actionManager.getAction(IdeActions.ACTION_EDITOR_ESCAPE).getShortcutSet(),
+                defaultEscapeAction.getShortcutSet(),
                 editor.getContentComponent());
     }
 
     private String getSurroundingLines(Editor editor) {
-        int TOP_CONTEXT_LINES = 10;
-        int BOTTOM_CONTEXT_LINES = 5;
-
         CaretModel caretModel = editor.getCaretModel();
         int currentLine = caretModel.getLogicalPosition().line;
         int currentOffset = caretModel.getOffset();
@@ -260,29 +279,23 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
     /**
      * Debounce a given task so that rapid key events cancel previous tasks.
      */
-    private void debounce(Runnable task, int delay) {
-        TimerTask oldTask = lastTask.get();
-        if (oldTask != null) {
-            oldTask.cancel();
+    private void debounce(Runnable task, int delayMs) {
+        if (pendingTask != null && !pendingTask.isDone()) {
+            pendingTask.cancel(false);
         }
 
-        TimerTask newTask = new TimerTask() {
-            @Override
-            public void run() {
-                task.run();
-            }
-        };
-
-        if (lastTask.compareAndSet(oldTask, newTask)) {
-            timer.schedule(newTask, delay);
-        } else {
-            newTask.cancel();
-        }
+        pendingTask = scheduler.schedule(task, delayMs, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void dispose() {
-        timer.cancel();
+        if (pendingTask != null) {
+            pendingTask.cancel(true);
+        }
+
+        scheduler.shutdownNow();
+
+        // Clean up actions
         if (currentTabAction != null) {
             currentTabAction = null;
         }
