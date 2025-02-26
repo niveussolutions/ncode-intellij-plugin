@@ -165,7 +165,13 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
                 if (generatedTextCache != null && generatedTextOffset != -1) {
-                    // If there's an active suggestion, accept it
+                    // Calculate the position at the end of the generated text
+                    int endPosition = generatedTextOffset + generatedTextCache.length();
+
+                    // Move the caret to the end of the generated text
+                    editor.getCaretModel().moveToOffset(endPosition);
+
+                    // Remove highlighting and clear cache
                     removeHighlighting(editor);
                     clearCache(editor);
                 } else {
