@@ -5,7 +5,14 @@ import com.intellij.codeInsight.editorActions.TypedHandlerDelegate;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.editor.colors.EditorColorsManager;
+import com.intellij.openapi.editor.colors.EditorColorsScheme;
+import com.intellij.openapi.editor.colors.EditorColors;
+import com.intellij.openapi.editor.markup.HighlighterLayer;
+import com.intellij.openapi.editor.markup.HighlighterTargetArea;
+import com.intellij.openapi.editor.markup.MarkupModel;
+import com.intellij.openapi.editor.markup.TextAttributes;
+import com.intellij.openapi.editor.markup.RangeHighlighter;
 import com.intellij.openapi.actionSystem.IdeActions;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
@@ -19,14 +26,20 @@ import java.io.IOException;
 import com.intellij.openapi.editor.CaretModel;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.util.TextRange;
+import java.awt.*;
+import com.intellij.openapi.Disposable;
+import com.intellij.openapi.util.Disposer;
+import java.util.concurrent.atomic.AtomicReference;
 
-public class NCodeInlineCompletionProvider extends TypedHandlerDelegate {
-    // Use a Timer instance for debounce
-    private Timer timer = new Timer();
-    private TimerTask lastTask;
+public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implements Disposable {
+    private final Timer timer = new Timer(true); // Make it a daemon timer
+    private final AtomicReference<TimerTask> lastTask = new AtomicReference<>();
+    private AnAction currentTabAction;
+    private AnAction currentEscapeAction;
 
     private String generatedTextCache = null;
     private int generatedTextOffset = -1;
+    private int highlighterId = -1; // Keep track of highlighter ID
 
     @Override
     public @NotNull Result charTyped(char c, @NotNull Project project, @NotNull Editor editor, @NotNull PsiFile file) {
@@ -56,8 +69,9 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate {
 
                             // Insert the completion text at the caret
                             editor.getDocument().insertString(offset, generatedText);
-                            // Select the inserted text so it's easy to accept/reject
-                            editor.getSelectionModel().setSelection(offset, offset + generatedText.length());
+
+                            // Apply transparent highlighting
+                            applyTransparentHighlighting(editor, offset, offset + generatedText.length(), editor);
 
                             // Install custom actions for tab and escape
                             installTabCompletionAction(editor);
@@ -65,17 +79,17 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate {
 
                         } else {
                             System.out.println("No valid completion generated. Raw response: " + response);
-                            clearCache();
+                            clearCache(editor);
                         }
 
                     } catch (IOException e) {
                         System.err.println("Error calling Vertex AI: " + e.getMessage());
                         e.printStackTrace();
-                        clearCache();
+                        clearCache(editor);
                     } catch (Exception e) {
                         System.err.println("Unexpected error: " + e.getMessage());
                         e.printStackTrace();
-                        clearCache();
+                        clearCache(editor);
                     }
 
                     System.out.println("Vertex AI code test complete");
@@ -86,44 +100,111 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate {
         return Result.CONTINUE;
     }
 
-    private void clearCache() {
+    private void clearCache(Editor editor) {
         generatedTextCache = null;
         generatedTextOffset = -1;
+        removeHighlighting(editor);
+    }
+
+    private void applyTransparentHighlighting(Editor editor, int startOffset, int endOffset, Editor currentEditor) {
+        EditorColorsScheme scheme = EditorColorsManager.getInstance().getGlobalScheme();
+        TextAttributes attributes = new TextAttributes();
+
+        // Get the actual selection background color from the scheme
+        Color selectionColor = scheme.getColor(EditorColors.SELECTION_BACKGROUND_COLOR);
+        if (selectionColor != null) {
+            // Make a more transparent version of the selection color
+            attributes.setBackgroundColor(new Color(
+                    selectionColor.getRed(),
+                    selectionColor.getGreen(),
+                    selectionColor.getBlue(),
+                    40)); // 40 alpha for subtle background
+        } else {
+            // Fallback color if selection color is not defined
+            attributes.setBackgroundColor(new Color(200, 200, 200, 40));
+        }
+
+        // Set a subtle foreground color
+        Color defaultForeground = scheme.getDefaultForeground();
+        if (defaultForeground != null) {
+            attributes.setForegroundColor(new Color(
+                    defaultForeground.getRed(),
+                    defaultForeground.getGreen(),
+                    defaultForeground.getBlue(),
+                    180)); // 180 alpha for readable but subtle text
+        }
+
+        MarkupModel markupModel = editor.getMarkupModel();
+        RangeHighlighter highlighter = markupModel.addRangeHighlighter(
+                startOffset,
+                endOffset,
+                HighlighterLayer.SELECTION - 1,
+                attributes,
+                HighlighterTargetArea.EXACT_RANGE);
+        highlighterId = highlighter.hashCode();
+    }
+
+    private void removeHighlighting(Editor editor) {
+        if (highlighterId != -1) {
+            MarkupModel markupModel = editor.getMarkupModel();
+            markupModel.removeAllHighlighters();
+            highlighterId = -1;
+        }
     }
 
     private void installTabCompletionAction(Editor editor) {
+        // Remove previous action if exists
+        if (currentTabAction != null) {
+            currentTabAction.unregisterCustomShortcutSet(editor.getContentComponent());
+        }
+
         ActionManager actionManager = ActionManager.getInstance();
-        AnAction tabAction = new AnAction() {
+        currentTabAction = new AnAction() {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
                 if (generatedTextCache != null && generatedTextOffset != -1) {
-                    // Accept the completion. Nothing needs to be done here, as insertion already
-                    // happened. Just clear selection and cache
-                    editor.getSelectionModel().removeSelection();
-                    clearCache();
+                    removeHighlighting(editor);
+                    clearCache(editor);
                 }
             }
         };
-        tabAction.registerCustomShortcutSet(
-                actionManager.getAction(IdeActions.ACTION_EDITOR_TAB).getShortcutSet(), editor.getContentComponent());
+        currentTabAction.registerCustomShortcutSet(
+                actionManager.getAction(IdeActions.ACTION_EDITOR_TAB).getShortcutSet(),
+                editor.getContentComponent());
     }
 
     private void installEscapeAction(Editor editor) {
+        // Remove previous action if exists
+        if (currentEscapeAction != null) {
+            currentEscapeAction.unregisterCustomShortcutSet(editor.getContentComponent());
+        }
+
         ActionManager actionManager = ActionManager.getInstance();
-        AnAction escapeAction = new AnAction() {
+        currentEscapeAction = new AnAction() {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
                 if (generatedTextCache != null && generatedTextOffset != -1) {
-                    // Remove the inserted text
-                    WriteCommandAction.runWriteCommandAction(editor.getProject(), () -> {
-                        Document document = editor.getDocument();
-                        document.deleteString(generatedTextOffset, generatedTextOffset + generatedTextCache.length());
-                        clearCache();
-                    });
+                    Project project = editor.getProject();
+                    if (project != null) {
+                        WriteCommandAction.runWriteCommandAction(project, () -> {
+                            try {
+                                Document document = editor.getDocument();
+                                if (generatedTextOffset + generatedTextCache.length() <= document.getTextLength()) {
+                                    document.deleteString(generatedTextOffset,
+                                            generatedTextOffset + generatedTextCache.length());
+                                }
+                            } catch (Exception ex) {
+                                System.err.println("Error removing completion text: " + ex.getMessage());
+                            } finally {
+                                removeHighlighting(editor);
+                                clearCache(editor);
+                            }
+                        });
+                    }
                 }
             }
         };
-        escapeAction.registerCustomShortcutSet(
+        currentEscapeAction.registerCustomShortcutSet(
                 actionManager.getAction(IdeActions.ACTION_EDITOR_ESCAPE).getShortcutSet(),
                 editor.getContentComponent());
     }
@@ -160,17 +241,33 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate {
      * Debounce a given task so that rapid key events cancel previous tasks.
      */
     private void debounce(Runnable task, int delay) {
-        // Cancel the previous scheduled task if it exists
-        if (lastTask != null) {
-            lastTask.cancel();
+        TimerTask oldTask = lastTask.get();
+        if (oldTask != null) {
+            oldTask.cancel();
         }
-        // Create a new TimerTask with the provided task
-        lastTask = new TimerTask() {
+
+        TimerTask newTask = new TimerTask() {
             @Override
             public void run() {
                 task.run();
             }
         };
-        timer.schedule(lastTask, delay);
+
+        if (lastTask.compareAndSet(oldTask, newTask)) {
+            timer.schedule(newTask, delay);
+        } else {
+            newTask.cancel();
+        }
+    }
+
+    @Override
+    public void dispose() {
+        timer.cancel();
+        if (currentTabAction != null) {
+            currentTabAction = null;
+        }
+        if (currentEscapeAction != null) {
+            currentEscapeAction = null;
+        }
     }
 }
