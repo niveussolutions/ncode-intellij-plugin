@@ -159,17 +159,31 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         }
 
         ActionManager actionManager = ActionManager.getInstance();
+        AnAction defaultTabAction = actionManager.getAction(IdeActions.ACTION_EDITOR_TAB);
+
         currentTabAction = new AnAction() {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
                 if (generatedTextCache != null && generatedTextOffset != -1) {
+                    // If there's an active suggestion, accept it
                     removeHighlighting(editor);
                     clearCache(editor);
+                } else {
+                    // If no suggestion is active, perform the default tab action
+                    defaultTabAction.actionPerformed(e);
                 }
             }
+
+            @Override
+            public void update(@NotNull AnActionEvent e) {
+                // Enable this action only when there's a suggestion or to allow default
+                // behavior
+                e.getPresentation().setEnabled(true);
+            }
         };
+
         currentTabAction.registerCustomShortcutSet(
-                actionManager.getAction(IdeActions.ACTION_EDITOR_TAB).getShortcutSet(),
+                defaultTabAction.getShortcutSet(),
                 editor.getContentComponent());
     }
 
