@@ -13,8 +13,7 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.colors.EditorColors;
 import com.intellij.openapi.editor.colors.EditorColorsManager;
 import com.intellij.openapi.editor.colors.EditorColorsScheme;
-import com.intellij.openapi.editor.event.EditorFactoryAdapter;
-import com.intellij.openapi.editor.event.EditorFactoryEvent;
+import com.intellij.openapi.editor.event.*;
 import com.intellij.openapi.editor.markup.HighlighterLayer;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.RangeHighlighter;
@@ -55,6 +54,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
     private static final int FALLBACK_BG_RED = 200;
     private static final int FALLBACK_BG_GREEN = 200;
     private static final int FALLBACK_BG_BLUE = 200;
+    private static final int COOLDOWN_AFTER_ACCEPT_MS = 1000;
 
     // Use IntelliJ's executor service for better integration with the platform
     private final ScheduledExecutorService scheduler = AppExecutorUtil.getAppScheduledExecutorService();
@@ -65,6 +65,15 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
 
     // Key listener to handle all key presses
     private KeyListener activeKeyListener;
+
+    // Document listener to handle document changes
+    private DocumentListener documentListener;
+
+    // Flag to prevent suggestion after accepting one
+    private boolean suggestionJustAccepted = false;
+
+    // Timer to reset the suggestion-just-accepted flag
+    private ScheduledFuture<?> suggestionCooldownTask;
 
     // We're using static inner classes to improve memory efficiency
     private static class CompletionState {
@@ -91,22 +100,65 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         }
     }
 
+    public NCodeInlineCompletionProvider() {
+        // Register to get notifications for all editors
+        com.intellij.openapi.editor.EditorFactory.getInstance().addEditorFactoryListener(
+                new EditorFactoryAdapter() {
+                    @Override
+                    public void editorCreated(@NotNull EditorFactoryEvent event) {
+                        setupEditorListeners(event.getEditor());
+                    }
+                },
+                this // Disposable to ensure listener is removed when provider is disposed
+        );
+    }
+
+    private void setupEditorListeners(Editor editor) {
+        // Create and install document listener
+        documentListener = new DocumentListener() {
+            @Override
+            public void documentChanged(@NotNull DocumentEvent event) {
+                // If there's an active completion, any document change should cancel it
+                if (completionState != null) {
+                    cleanupCurrentCompletion(editor);
+                }
+
+                // Don't trigger completion if a suggestion was just accepted
+                if (suggestionJustAccepted) {
+                    return;
+                }
+
+                // Trigger completion after debounce period for all document changes
+                Project project = editor.getProject();
+                if (project != null && !project.isDisposed()) {
+                    debounce(() -> processCompletion(project, editor), DEBOUNCE_DELAY_MS);
+                }
+            }
+        };
+
+        // Add the document listener to the editor's document
+        editor.getDocument().addDocumentListener(documentListener);
+    }
+
     @Override
     public @NotNull Result charTyped(char c, @NotNull Project project, @NotNull Editor editor, @NotNull PsiFile file) {
         // If there's an active completion, any character typed should cancel it
         if (completionState != null) {
             cleanupCurrentCompletion(editor);
-            return Result.CONTINUE;
         }
 
-        // Process all character typing events with debounce
-        debounce(() -> processCompletion(project, editor), DEBOUNCE_DELAY_MS);
+        // Character typing is already handled by the document listener
         return Result.CONTINUE;
     }
 
     private void processCompletion(Project project, Editor editor) {
         // Avoid processing if editor is disposed or project is closed
         if (project.isDisposed() || editor.isDisposed()) {
+            return;
+        }
+
+        // Skip if we're in the cooldown period after accepting a suggestion
+        if (suggestionJustAccepted) {
             return;
         }
 
@@ -151,7 +203,18 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
             if (generatedText != null && !generatedText.isEmpty()) {
                 // Insert the completion text at the caret
                 Document document = editor.getDocument();
+
+                // Temporarily remove document listener to avoid recursive triggering
+                if (documentListener != null) {
+                    document.removeDocumentListener(documentListener);
+                }
+
                 document.insertString(offset, generatedText);
+
+                // Re-add document listener
+                if (documentListener != null) {
+                    document.addDocumentListener(documentListener);
+                }
 
                 // Apply transparent highlighting
                 RangeHighlighter highlighter = applyTransparentHighlighting(editor, offset,
@@ -242,6 +305,9 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                 // Calculate the position at the end of the generated text
                 int endPosition = offset + generatedText.length();
 
+                // Set the flag to prevent immediate suggestion after acceptance
+                setSuggestionJustAccepted(true);
+
                 // Move the caret to the end of the generated text
                 editor.getCaretModel().moveToOffset(endPosition);
 
@@ -289,9 +355,20 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                 WriteCommandAction.runWriteCommandAction(project, () -> {
                     try {
                         Document document = editor.getDocument();
+
+                        // Temporarily remove document listener to avoid recursive triggering
+                        if (documentListener != null) {
+                            document.removeDocumentListener(documentListener);
+                        }
+
                         int endOffset = offset + generatedText.length();
                         if (endOffset <= document.getTextLength()) {
                             document.deleteString(offset, endOffset);
+                        }
+
+                        // Re-add document listener
+                        if (documentListener != null) {
+                            document.addDocumentListener(documentListener);
                         }
                     } catch (Exception ex) {
                         LOG.error("Error removing completion text", ex);
@@ -317,6 +394,28 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
 
         // Add the key listener to the editor component
         editor.getContentComponent().addKeyListener(activeKeyListener);
+    }
+
+    /**
+     * Sets the suggestionJustAccepted flag and schedules its reset after the
+     * cooldown period.
+     */
+    private void setSuggestionJustAccepted(boolean value) {
+        suggestionJustAccepted = value;
+
+        // Cancel any existing cooldown task
+        if (suggestionCooldownTask != null) {
+            suggestionCooldownTask.cancel(false);
+            suggestionCooldownTask = null;
+        }
+
+        // If we're setting the flag to true, schedule a reset
+        if (value) {
+            suggestionCooldownTask = scheduler.schedule(() -> {
+                suggestionJustAccepted = false;
+                suggestionCooldownTask = null;
+            }, COOLDOWN_AFTER_ACCEPT_MS, TimeUnit.MILLISECONDS);
+        }
     }
 
     private String getSurroundingLines(Editor editor) {
@@ -376,6 +475,12 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         ScheduledFuture<?> task = pendingTask.getAndSet(null);
         if (task != null) {
             task.cancel(true);
+        }
+
+        // Cancel the suggestion cooldown timer if active
+        if (suggestionCooldownTask != null) {
+            suggestionCooldownTask.cancel(true);
+            suggestionCooldownTask = null;
         }
 
         // No need to shutdown the scheduler as it's provided by the platform
