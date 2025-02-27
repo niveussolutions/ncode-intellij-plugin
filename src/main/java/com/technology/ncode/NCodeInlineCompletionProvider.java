@@ -3,10 +3,7 @@ package com.technology.ncode;
 import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.intellij.codeInsight.editorActions.TypedHandlerDelegate;
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.actionSystem.ActionManager;
-import com.intellij.openapi.actionSystem.AnAction;
-import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.IdeActions;
+import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.diagnostic.Logger;
@@ -16,6 +13,8 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.colors.EditorColors;
 import com.intellij.openapi.editor.colors.EditorColorsManager;
 import com.intellij.openapi.editor.colors.EditorColorsScheme;
+import com.intellij.openapi.editor.event.EditorFactoryAdapter;
+import com.intellij.openapi.editor.event.EditorFactoryEvent;
 import com.intellij.openapi.editor.markup.HighlighterLayer;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.RangeHighlighter;
@@ -26,7 +25,11 @@ import com.intellij.psi.PsiFile;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import org.jetbrains.annotations.NotNull;
 
+import javax.swing.*;
 import java.awt.Color;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
@@ -44,7 +47,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
     private static final Logger LOG = Logger.getInstance(NCodeInlineCompletionProvider.class);
 
     // Configuration constants
-    private static final int DEBOUNCE_DELAY_MS = 1000;
+    private static final int DEBOUNCE_DELAY_MS = 2000;
     private static final int TOP_CONTEXT_LINES = 10;
     private static final int BOTTOM_CONTEXT_LINES = 5;
     private static final int HIGHLIGHTING_ALPHA = 40;
@@ -60,21 +63,21 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
     // Completion state
     private CompletionState completionState;
 
+    // Key listener to handle all key presses
+    private KeyListener activeKeyListener;
+
     // We're using static inner classes to improve memory efficiency
     private static class CompletionState {
         final String text;
         final int offset;
         final RangeHighlighter highlighter;
         final AnAction tabAction;
-        final AnAction escapeAction;
 
-        CompletionState(String text, int offset, RangeHighlighter highlighter,
-                AnAction tabAction, AnAction escapeAction) {
+        CompletionState(String text, int offset, RangeHighlighter highlighter, AnAction tabAction) {
             this.text = text;
             this.offset = offset;
             this.highlighter = highlighter;
             this.tabAction = tabAction;
-            this.escapeAction = escapeAction;
         }
 
         void cleanup(Editor editor) {
@@ -85,15 +88,17 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
             if (tabAction != null) {
                 tabAction.unregisterCustomShortcutSet(editor.getContentComponent());
             }
-
-            if (escapeAction != null) {
-                escapeAction.unregisterCustomShortcutSet(editor.getContentComponent());
-            }
         }
     }
 
     @Override
     public @NotNull Result charTyped(char c, @NotNull Project project, @NotNull Editor editor, @NotNull PsiFile file) {
+        // If there's an active completion, any character typed should cancel it
+        if (completionState != null) {
+            cleanupCurrentCompletion(editor);
+            return Result.CONTINUE;
+        }
+
         // Process all character typing events with debounce
         debounce(() -> processCompletion(project, editor), DEBOUNCE_DELAY_MS);
         return Result.CONTINUE;
@@ -152,17 +157,18 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                 RangeHighlighter highlighter = applyTransparentHighlighting(editor, offset,
                         offset + generatedText.length());
 
-                // Install custom actions for tab and escape
+                // Install custom action for tab
                 AnAction tabAction = installTabCompletionAction(editor, offset, generatedText);
-                AnAction escapeAction = installEscapeAction(editor, offset, generatedText);
+
+                // Install the key listener for handling other keys
+                installKeyListener(editor, offset, generatedText);
 
                 // Store the completion state
                 completionState = new CompletionState(
                         generatedText,
                         offset,
                         highlighter,
-                        tabAction,
-                        escapeAction);
+                        tabAction);
             } else {
                 LOG.warn("No valid completion generated. Raw response: " + response);
             }
@@ -178,6 +184,12 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
             state.cleanup(editor);
             completionState = null;
         });
+
+        // Remove key listener if it exists
+        if (activeKeyListener != null && editor != null) {
+            editor.getContentComponent().removeKeyListener(activeKeyListener);
+            activeKeyListener = null;
+        }
     }
 
     private RangeHighlighter applyTransparentHighlighting(Editor editor, int startOffset, int endOffset) {
@@ -250,17 +262,29 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         return tabAction;
     }
 
-    private AnAction installEscapeAction(Editor editor, int offset, String generatedText) {
-        ActionManager actionManager = ActionManager.getInstance();
-        AnAction defaultEscapeAction = actionManager.getAction(IdeActions.ACTION_EDITOR_ESCAPE);
+    private void installKeyListener(Editor editor, int offset, String generatedText) {
+        // Remove any existing listener
+        if (activeKeyListener != null) {
+            editor.getContentComponent().removeKeyListener(activeKeyListener);
+        }
 
-        AnAction escapeAction = new AnAction() {
+        // Create a new key listener that will handle all keys except tab
+        activeKeyListener = new KeyAdapter() {
             @Override
-            public void actionPerformed(@NotNull AnActionEvent e) {
+            public void keyPressed(KeyEvent e) {
+                // If Tab key is pressed, the tab action will handle it
+                if (e.getKeyCode() == KeyEvent.VK_TAB) {
+                    return;
+                }
+
+                // For any other key, cancel the completion
                 Project project = editor.getProject();
                 if (project == null || project.isDisposed()) {
                     return;
                 }
+
+                // We need to consume the event to prevent it from being processed twice
+                e.consume();
 
                 WriteCommandAction.runWriteCommandAction(project, () -> {
                     try {
@@ -273,16 +297,26 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                         LOG.error("Error removing completion text", ex);
                     } finally {
                         cleanupCurrentCompletion(editor);
+
+                        // After clearing the suggestion, we should re-dispatch the key event
+                        // to properly handle the key press
+                        KeyEvent newEvent = new KeyEvent(
+                                e.getComponent(),
+                                e.getID(),
+                                e.getWhen(),
+                                e.getModifiers(),
+                                e.getKeyCode(),
+                                e.getKeyChar(),
+                                e.getKeyLocation());
+
+                        SwingUtilities.processKeyBindings(newEvent);
                     }
                 });
             }
         };
 
-        escapeAction.registerCustomShortcutSet(
-                Objects.requireNonNull(defaultEscapeAction).getShortcutSet(),
-                editor.getContentComponent());
-
-        return escapeAction;
+        // Add the key listener to the editor component
+        editor.getContentComponent().addKeyListener(activeKeyListener);
     }
 
     private String getSurroundingLines(Editor editor) {
