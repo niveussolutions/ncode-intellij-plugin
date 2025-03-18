@@ -1,4 +1,4 @@
-package com.technology.ncode;
+package com.technology.ncode.AskAQuestion;
 
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;

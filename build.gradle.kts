@@ -13,6 +13,8 @@ repositories {
 
 dependencies {
     implementation("com.google.cloud:google-cloud-vertexai:1.17.0")
+    implementation("com.google.cloud:google-cloud-aiplatform:3.32.0")
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.21.0")
 }
 
 // Configure Gradle IntelliJ Plugin

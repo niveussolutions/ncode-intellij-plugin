@@ -1,4 +1,4 @@
-package com.technology.ncode;
+package com.technology.ncode.VertexAI;
 
 import com.google.cloud.vertexai.VertexAI;
 import com.google.cloud.vertexai.generativeai.ContentMaker;

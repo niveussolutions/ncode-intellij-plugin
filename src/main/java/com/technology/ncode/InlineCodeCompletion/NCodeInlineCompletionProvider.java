@@ -1,4 +1,4 @@
-package com.technology.ncode;
+package com.technology.ncode.InlineCodeCompletion;
 
 import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.intellij.codeInsight.editorActions.TypedHandlerDelegate;
@@ -22,6 +22,8 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiFile;
 import com.intellij.util.concurrency.AppExecutorUtil;
+import com.technology.ncode.VertexAI.InlineVertexAi;
+
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
