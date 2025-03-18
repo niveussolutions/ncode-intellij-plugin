@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.technology.ncode</id>
     <name>NCode</name>
-    <version>1.0.0</version>
+    <version>2.0.0</version>
     <vendor email="innovation@niveussolutions.com" url="https://niveussolutions.com">
         Niveus Solutions
     </vendor>
@@ -18,29 +18,53 @@
     </application-components>
 
     <extensions defaultExtensionNs="com.intellij">
-        <notificationGroup id="NCode Notifications"
-            displayType="BALLOON"
-            key="notification.group.name" />
-        <postStartupActivity implementation="com.technology.ncode.NCodeStartupActivity" />
-        <toolWindow id="AskAQuestionSidebar"
-            anchor="right"
-            factoryClass="com.technology.ncode.AskAQuestionSidebarFactory" />
-        <typedHandler implementation="com.technology.ncode.NCodeInlineCompletionProvider" />
     </extensions>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
 
     <actions>
-        <action id="com.technology.ncode.GoogleThis" class="com.technology.ncode.GoogleThis"
-            text="Google This!">
+        <!-- Define a new group named "ncode" -->
+        <group id="com.technology.ncodeGroup"
+            text="ncode"
+            description="Custom ncode group"
+            popup="true">
+
+            <!-- Attach this group to the Editor Popup Menu -->
             <add-to-group group-id="EditorPopupMenu" anchor="first" />
+        </group>
+
+        <!-- Google This -->
+        <action id="com.technology.ncode.GoogleThis.GoogleThis"
+            class="com.technology.ncode.GoogleThis.GoogleThis"
+            text="Google this please!">
+            <add-to-group group-id="com.technology.ncodeGroup" />
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G" />
         </action>
-        <action id="com.technology.ncode.AskAQuestion" class="com.technology.ncode.AskAQuestion"
-            text="Ask a question!">
-            <add-to-group group-id="EditorPopupMenu" anchor="first" />
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt Q" />
+
+        <!-- Ask Question -->
+        <action id="com.technology.ncode.AskAQuestion.DisplayQuestionToolWindowContent"
+            class="com.technology.ncode.AskAQuestion.DisplayQuestionAction"
+            text="Ask Question">
+            <add-to-group group-id="com.technology.ncodeGroup" />
+            <add-to-group group-id="ToolsMenu" anchor="last" />
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G" />
+        </action>
+
+        <!-- Generate Test Case -->
+        <action id="com.technology.ncode.GenerateTestCases.GenerateTestCase"
+            class="com.technology.ncode.GenerateTestCases.GenerateTestCase"
+            text="Generate Test Case">
+            <add-to-group group-id="com.technology.ncodeGroup" />
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G" />
+        </action>
+
+        <!-- Generate Documentation -->
+        <action id="com.technology.ncode.GenerateDocumentation.GenerateDocumentation"
+            class="com.technology.ncode.GenerateDocumentation.GenerateDocumentation"
+            text="Generate Documentation">
+            <add-to-group group-id="com.technology.ncodeGroup" />
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G" />
         </action>
     </actions>
 

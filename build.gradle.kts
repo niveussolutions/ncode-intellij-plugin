@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.technology"
-version = "1.0-SNAPSHOT"
+version = "2.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -13,6 +13,8 @@ repositories {
 
 dependencies {
     implementation("com.google.cloud:google-cloud-vertexai:1.17.0")
+    implementation("com.google.cloud:google-cloud-aiplatform:3.32.0")
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.21.0")
 }
 
 // Configure Gradle IntelliJ Plugin
