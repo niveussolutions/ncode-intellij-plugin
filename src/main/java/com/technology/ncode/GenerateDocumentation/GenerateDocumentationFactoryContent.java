@@ -2,9 +2,11 @@ package com.technology.ncode.GenerateDocumentation;
 
 import javax.swing.*;
 
-import com.technology.ncode.VertexAI.VertexAIChatbot;
+import com.technology.ncode.VertexAI.VertexAIChatbot; // Import old VertexAI class
+import com.technology.ncode.VertexAI.DocumentationVertexAi; // Import new VertexAI class
 
 import java.awt.*;
+import java.io.IOException;
 
 public class GenerateDocumentationFactoryContent extends JPanel {
     private JTextPane selectedCodeArea;
@@ -44,6 +46,38 @@ public class GenerateDocumentationFactoryContent extends JPanel {
         add(chatScrollPane, BorderLayout.CENTER);
     }
 
+    /*
+     * // New implementation using DocumentationVertexAi
+     * public void setSelectedCode(String code) {
+     * selectedCodeArea.setText(code);
+     * chatOutputArea.setText("\n\n\u2728 Generating documentation...\n\n");
+     * 
+     * // Fetch documentation from Vertex AI using the new DocumentationVertexAi
+     * class
+     * SwingUtilities.invokeLater(() -> {
+     * DocumentationVertexAi documentationVertexAi = new DocumentationVertexAi();
+     * StringBuilder documentationBuilder = new StringBuilder();
+     * 
+     * try {
+     * documentationVertexAi.generateContentStream(code, text -> {
+     * SwingUtilities.invokeLater(() -> {
+     * documentationBuilder.append(text);
+     * chatOutputArea.setText(documentationBuilder.toString());
+     * });
+     * });
+     * } catch (IOException e) {
+     * e.printStackTrace();
+     * SwingUtilities.invokeLater(() ->
+     * chatOutputArea.setText("Error generating documentation."));
+     * }
+     * 
+     * selectedCodeArea.setCaretPosition(0);
+     * chatOutputArea.setCaretPosition(0);
+     * });
+     * }
+     */
+
+    // Old implementation using VertexAIChatbot
     public void setSelectedCode(String code) {
         selectedCodeArea.setText(code);
         chatOutputArea.setText("\n\n\u2728 Generating documentation...\n\n");
@@ -60,4 +94,5 @@ public class GenerateDocumentationFactoryContent extends JPanel {
     public JPanel getPanel() {
         return this;
     }
+
 }

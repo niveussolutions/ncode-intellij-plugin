@@ -3,9 +3,11 @@ package com.technology.ncode.GenerateTestCases;
 import javax.swing.*;
 import javax.swing.border.*;
 
-import com.technology.ncode.VertexAI.VertexAIChatbot;
+import com.technology.ncode.VertexAI.TestCaseCodeVertexAi; // Import new VertexAI class
+import com.technology.ncode.VertexAI.VertexAIChatbot; // Import old VertexAI class
 
 import java.awt.*;
+import java.io.IOException;
 
 public class GenerateTestCaseFactoryContent extends JPanel {
     private JTextPane selectedCodeArea;
@@ -103,4 +105,44 @@ public class GenerateTestCaseFactoryContent extends JPanel {
     public JPanel getPanel() {
         return this;
     }
+
+    /*
+     * // New implementation using TestCaseCodeVertexAi
+     * public void setSelectedCode(String code) {
+     * SwingUtilities.invokeLater(() -> {
+     * selectedCodeArea.setText(code);
+     * selectedCodeArea.setCaretPosition(0);
+     * });
+     * 
+     * // Display waiting message
+     * SwingUtilities.invokeLater(() -> {
+     * chatOutputArea.setText("Fetching test cases, please wait...");
+     * chatOutputArea.setForeground(Color.GRAY);
+     * chatOutputArea.setFont(new Font("Monospaced", Font.ITALIC, 14));
+     * });
+     * 
+     * // Fetch test case output dynamically in a separate thread using the new
+     * TestCaseCodeVertexAi class
+     * new Thread(() -> {
+     * TestCaseCodeVertexAi testCaseCodeVertexAi = new TestCaseCodeVertexAi();
+     * StringBuilder testCaseOutputBuilder = new StringBuilder();
+     * 
+     * try {
+     * testCaseCodeVertexAi.generateContentStream(code, text -> {
+     * SwingUtilities.invokeLater(() -> {
+     * testCaseOutputBuilder.append(text);
+     * chatOutputArea.setText(testCaseOutputBuilder.toString());
+     * chatOutputArea.setForeground(Color.WHITE);
+     * chatOutputArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+     * chatOutputArea.setCaretPosition(0);
+     * });
+     * });
+     * } catch (IOException e) {
+     * e.printStackTrace();
+     * SwingUtilities.invokeLater(() ->
+     * chatOutputArea.setText("Error generating test cases."));
+     * }
+     * }).start();
+     * }
+     */
 }

@@ -3,10 +3,11 @@ package com.technology.ncode.AskAQuestion;
 import javax.swing.*;
 import javax.swing.text.*;
 
-import com.technology.ncode.VertexAI.VertexAIChatbot;
-
+import com.technology.ncode.VertexAI.AskAQuestionVertexAi;
+import com.technology.ncode.VertexAI.VertexAIChatbot; // Remove the old import
 import java.awt.*;
 import java.awt.event.*;
+import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
@@ -17,11 +18,13 @@ public class DisplayQuestionToolWindowContent extends JPanel {
     private JButton sendButton;
     private ExecutorService executorService;
     private int waitingMessageOffset = -1; // Track waiting message position
+    private AskAQuestionVertexAi askAQuestionVertexAi; // Add VertexAI instance
 
     public DisplayQuestionToolWindowContent() {
         setLayout(new BorderLayout());
         setBackground(new Color(25, 25, 25));
         executorService = Executors.newSingleThreadExecutor();
+        askAQuestionVertexAi = new AskAQuestionVertexAi(); // Initialize
 
         // Selected Code Area
         selectedCodeArea = new JTextPane();
@@ -144,6 +147,7 @@ public class DisplayQuestionToolWindowContent extends JPanel {
         sendButton.setForeground(Color.GRAY);
         askQuestionField.setEnabled(false);
 
+        // FIX:OLD WAY IMPLEMENTATION IS HERE
         executorService.execute(() -> {
             String response = VertexAIChatbot.getVertexAIResponse(selectedCode + "\n\n" + "Question: " + questionText);
             SwingUtilities.invokeLater(() -> {
@@ -157,6 +161,40 @@ public class DisplayQuestionToolWindowContent extends JPanel {
                 askQuestionField.setEnabled(true);
             });
         });
+
+        // DONT TOUCH THIS!
+        // executorService.execute(() -> {
+        // // String response = VertexAIChatbot.getVertexAIResponse(selectedCode +
+        // "\n\n" +
+        // // "Question: " + questionText); //Old way
+        // String prompt = selectedCode + "\n\n" + "Question: " + questionText;
+
+        // try {
+        // askAQuestionVertexAi.generateContentStream(prompt, responseChunk -> {
+        // SwingUtilities.invokeLater(() -> {
+        // removeWaitingMessage(); // Remove waiting message once we start getting
+        // results
+        // appendNCodeMessage(responseChunk);
+        // });
+        // });
+        // } catch (IOException e) {
+        // SwingUtilities.invokeLater(() -> {
+        // removeWaitingMessage();
+        // appendNCodeMessage("Error communicating with Vertex AI: " + e.getMessage());
+        // appendSeparatorLine();
+        // });
+        // e.printStackTrace(); // Log the error
+        // } finally {
+        // SwingUtilities.invokeLater(() -> {
+        // appendSeparatorLine();
+        // // Re-enable send button after response is received (or error occurred)
+        // sendButton.setEnabled(true);
+        // sendButton.setForeground(Color.WHITE);
+        // askQuestionField.setEnabled(true);
+        // });
+        // }
+
+        // });
 
         SwingUtilities.invokeLater(() -> {
             askQuestionField.setText("Ask NCode...");
