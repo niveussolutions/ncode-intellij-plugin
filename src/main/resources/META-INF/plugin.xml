@@ -22,10 +22,6 @@
             displayType="BALLOON"
             key="notification.group.name" />
         <postStartupActivity implementation="com.technology.ncode.NCodeStartupActivity" />
-        <toolWindow id="AskAQuestionSidebar"
-            anchor="right"
-            factoryClass="com.technology.ncode.AskAQuestionSidebarFactory" />
-        <typedHandler implementation="com.technology.ncode.NCodeInlineCompletionProvider" />
     </extensions>
 
     <depends>com.intellij.modules.platform</depends>
@@ -36,11 +32,6 @@
             text="Google This!">
             <add-to-group group-id="EditorPopupMenu" anchor="first" />
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G" />
-        </action>
-        <action id="com.technology.ncode.AskAQuestion" class="com.technology.ncode.AskAQuestion"
-            text="Ask a question!">
-            <add-to-group group-id="EditorPopupMenu" anchor="first" />
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt Q" />
         </action>
     </actions>
 
