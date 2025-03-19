@@ -1,5 +1,6 @@
 package com.technology.ncode.VertexAI;
 
+import com.google.api.core.ApiFuture;
 import com.google.cloud.vertexai.VertexAI;
 import com.google.cloud.vertexai.generativeai.ContentMaker;
 import com.google.cloud.vertexai.generativeai.GenerativeModel;
@@ -49,6 +50,27 @@ public class InlineVertexAi {
             - Ensure the snippet is contextually appropriate and error-free.
             </artifact_info>
             """;
+
+    public ApiFuture<GenerateContentResponse> generateContentAsync(String prompt) throws IOException {
+        try (VertexAI vertexAi = new VertexAI(PROJECT_ID, LOCATION);) {
+            GenerationConfig generationConfig = GenerationConfig.newBuilder()
+                    .setTemperature(0.3f)
+                    .setMaxOutputTokens(300)
+                    .setTopP(1.0f)
+                    .setTopK(40)
+                    .build();
+
+            GenerativeModel model = new GenerativeModel.Builder()
+                    .setModelName("gemini-2.0-flash")
+                    .setVertexAi(vertexAi)
+                    .setGenerationConfig(generationConfig)
+                    .setSystemInstruction(
+                            ContentMaker.fromString(SYSTEM_PROMPT))
+                    .build();
+
+            return model.generateContentAsync(prompt);
+        }
+    }
 
     public GenerateContentResponse generateContent(String prompt) throws IOException {
         try (VertexAI vertexAi = new VertexAI(PROJECT_ID, LOCATION);) {

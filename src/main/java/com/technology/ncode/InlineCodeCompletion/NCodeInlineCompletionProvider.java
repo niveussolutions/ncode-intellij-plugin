@@ -1,5 +1,6 @@
 package com.technology.ncode.InlineCodeCompletion;
 
+import com.google.api.core.ApiFuture;
 import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.intellij.codeInsight.editorActions.TypedHandlerDelegate;
 import com.intellij.openapi.Disposable;
@@ -32,12 +33,16 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.IOException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Provides inline code completion functionality using Vertex AI.
@@ -199,46 +204,70 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
 
         InlineVertexAi inlineVertexAi = new InlineVertexAi();
         try {
-            GenerateContentResponse response = inlineVertexAi.generateContent(surroundingLines);
-            String generatedText = InlineVertexAi.extractGeneratedText(response);
+            ApiFuture<GenerateContentResponse> future = inlineVertexAi.generateContentAsync(surroundingLines);
 
-            if (generatedText != null && !generatedText.isEmpty()) {
-                // Insert the completion text at the caret
-                Document document = editor.getDocument();
+            // Handle the future response asynchronously
+            ListenableFuture<GenerateContentResponse> listenableFuture = Futures.immediateFuture(future.get());
+            Futures.addCallback(listenableFuture, new FutureCallback<GenerateContentResponse>() {
+                @Override
+                public void onSuccess(GenerateContentResponse response) {
+                    String generatedText = InlineVertexAi.extractGeneratedText(response);
 
-                // Temporarily remove document listener to avoid recursive triggering
-                if (documentListener != null) {
-                    document.removeDocumentListener(documentListener);
+                    if (generatedText != null && !generatedText.isEmpty()) {
+                        // Schedule modifications on the EDT and wrap them in a write action
+                        ApplicationManager.getApplication().invokeLater(() -> {
+                            if (editor.isDisposed()) {
+                                return;
+                            }
+                            WriteCommandAction.runWriteCommandAction(editor.getProject(), () -> {
+                                try {
+                                    // Insert the completion text at the caret
+                                    Document document = editor.getDocument();
+
+                                    // Temporarily remove document listener to avoid recursive triggering
+                                    if (documentListener != null) {
+                                        document.removeDocumentListener(documentListener);
+                                    }
+
+                                    document.insertString(offset, generatedText);
+
+                                    // Re-add document listener
+                                    if (documentListener != null) {
+                                        document.addDocumentListener(documentListener);
+                                    }
+
+                                    // Apply transparent highlighting
+                                    RangeHighlighter highlighter = applyTransparentHighlighting(editor, offset,
+                                            offset + generatedText.length());
+
+                                    // Install custom action for tab
+                                    AnAction tabAction = installTabCompletionAction(editor, offset, generatedText);
+
+                                    // Install the key listener for handling other keys
+                                    installKeyListener(editor, offset, generatedText);
+
+                                    // Store the completion state
+                                    completionState = new CompletionState(
+                                            generatedText,
+                                            offset,
+                                            highlighter,
+                                            tabAction);
+                                } catch (Exception e) {
+                                    LOG.error("Error processing completion after async retrieval", e);
+                                    cleanupCurrentCompletion(editor);
+                                }
+                            });
+                        });
+                    } else {
+                        LOG.warn("No valid completion generated. Raw response: " + response);
+                    }
                 }
 
-                document.insertString(offset, generatedText);
-
-                // Re-add document listener
-                if (documentListener != null) {
-                    document.addDocumentListener(documentListener);
+                @Override
+                public void onFailure(Throwable t) {
+                    LOG.warn("Error calling Vertex AI asynchronously", t);
                 }
-
-                // Apply transparent highlighting
-                RangeHighlighter highlighter = applyTransparentHighlighting(editor, offset,
-                        offset + generatedText.length());
-
-                // Install custom action for tab
-                AnAction tabAction = installTabCompletionAction(editor, offset, generatedText);
-
-                // Install the key listener for handling other keys
-                installKeyListener(editor, offset, generatedText);
-
-                // Store the completion state
-                completionState = new CompletionState(
-                        generatedText,
-                        offset,
-                        highlighter,
-                        tabAction);
-            } else {
-                LOG.warn("No valid completion generated. Raw response: " + response);
-            }
-        } catch (IOException e) {
-            LOG.warn("Error calling Vertex AI", e);
+            }, MoreExecutors.directExecutor());
         } catch (Exception e) {
             LOG.error("Unexpected error during completion generation", e);
         }
