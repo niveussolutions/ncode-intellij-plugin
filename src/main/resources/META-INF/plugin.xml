@@ -18,6 +18,8 @@
     </application-components>
 
     <extensions defaultExtensionNs="com.intellij">
+        <typedHandler
+            implementation="com.technology.ncode.InlineCodeCompletion.NCodeInlineCompletionProvider" />
     </extensions>
 
     <depends>com.intellij.modules.platform</depends>
