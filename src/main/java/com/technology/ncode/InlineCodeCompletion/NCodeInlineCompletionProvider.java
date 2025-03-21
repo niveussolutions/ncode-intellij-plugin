@@ -32,12 +32,12 @@ import java.awt.Color;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -81,6 +81,9 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
 
     // Timer to reset the suggestion-just-accepted flag
     private ScheduledFuture<?> suggestionCooldownTask;
+
+    // Flag to track if metrics have been reported for the current suggestion
+    private AtomicBoolean metricsReported = new AtomicBoolean(false);
 
     // We're using static inner classes to improve memory efficiency
     private static class CompletionState {
@@ -127,7 +130,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
             public void documentChanged(@NotNull DocumentEvent event) {
                 // If there's an active completion, any document change should cancel it
                 if (completionState != null) {
-                    cleanupCurrentCompletion(editor);
+                    cleanupCurrentCompletion(editor, false);
                 }
 
                 // Don't trigger completion if a suggestion was just accepted
@@ -151,7 +154,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
     public @NotNull Result charTyped(char c, @NotNull Project project, @NotNull Editor editor, @NotNull PsiFile file) {
         // If there's an active completion, any character typed should cancel it
         if (completionState != null) {
-            cleanupCurrentCompletion(editor);
+            cleanupCurrentCompletion(editor, false);
         }
 
         // Character typing is already handled by the document listener
@@ -178,7 +181,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
             WriteCommandAction.runWriteCommandAction(project, () -> {
                 try {
                     // Clean up any existing completion state
-                    cleanupCurrentCompletion(editor);
+                    cleanupCurrentCompletion(editor, false);
 
                     // Get the current caret offset
                     int offset = editor.getCaretModel().getOffset();
@@ -190,7 +193,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                     generateCompletion(editor, offset, surroundingLines);
                 } catch (Exception e) {
                     LOG.error("Error processing completion", e);
-                    cleanupCurrentCompletion(editor);
+                    cleanupCurrentCompletion(editor, false);
                 }
             });
         });
@@ -236,6 +239,9 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                                         document.addDocumentListener(documentListener);
                                     }
 
+                                    // Reset the metrics reported flag for this new suggestion
+                                    metricsReported.set(false);
+
                                     // Apply transparent highlighting
                                     RangeHighlighter highlighter = applyTransparentHighlighting(editor, offset,
                                             offset + generatedText.length());
@@ -254,7 +260,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                                             tabAction);
                                 } catch (Exception e) {
                                     LOG.error("Error processing completion after async retrieval", e);
-                                    cleanupCurrentCompletion(editor);
+                                    cleanupCurrentCompletion(editor, false);
                                 }
                             });
                         });
@@ -273,7 +279,12 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         }
     }
 
-    private void cleanupCurrentCompletion(Editor editor) {
+    private void cleanupCurrentCompletion(Editor editor, boolean wasAccepted) {
+        // Report metrics for current suggestion if they haven't been reported yet
+        if (completionState != null && !metricsReported.getAndSet(true)) {
+            UsageMetricsReporter.reportEditorMetrics(editor, completionState.text, wasAccepted);
+        }
+
         Optional.ofNullable(completionState).ifPresent(state -> {
             state.cleanup(editor);
             completionState = null;
@@ -342,8 +353,8 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                 // Move the caret to the end of the generated text
                 editor.getCaretModel().moveToOffset(endPosition);
 
-                // Clean up
-                cleanupCurrentCompletion(editor);
+                // Clean up and report metrics for an accepted suggestion
+                cleanupCurrentCompletion(editor, true);
             }
 
             @Override
@@ -404,7 +415,8 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                     } catch (Exception ex) {
                         LOG.error("Error removing completion text", ex);
                     } finally {
-                        cleanupCurrentCompletion(editor);
+                        // Mark suggestion as rejected
+                        cleanupCurrentCompletion(editor, false);
 
                         // After clearing the suggestion, we should re-dispatch the key event
                         // to properly handle the key press
