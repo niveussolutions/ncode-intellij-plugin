@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.technology"
-version = "2.0-SNAPSHOT"
+version = "3.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -23,7 +23,7 @@ intellij {
     version.set("2024.1.7")
     type.set("IC") // Target IDE Platform
 
-    plugins.set(listOf(/* Plugin Dependencies */))
+    plugins.set(listOf())
 }
 
 tasks {
