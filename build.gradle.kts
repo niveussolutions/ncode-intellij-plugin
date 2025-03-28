@@ -2,6 +2,7 @@ plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.9.25"
     id("org.jetbrains.intellij") version "1.17.4"
+    id("jacoco")
 }
 
 group = "com.technology"
@@ -15,6 +16,10 @@ dependencies {
     implementation("com.google.cloud:google-cloud-vertexai:1.17.0")
     implementation("com.google.cloud:google-cloud-aiplatform:3.32.0")
     implementation("com.google.auth:google-auth-library-oauth2-http:1.21.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1") // Update JUnit Jupiter API version
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1") // Update JUnit Jupiter Engine version
+    testImplementation("org.mockito:mockito-core:4.11.0") // Ensure Mockito core is added
+    testImplementation("org.mockito:mockito-junit-jupiter:4.11.0") // Ensure Mockito JUnit integration is added
 }
 
 // Configure Gradle IntelliJ Plugin
@@ -49,5 +54,50 @@ tasks {
 
     publishPlugin {
         token.set(System.getenv("PUBLISH_TOKEN"))
+    }
+
+    test {
+        useJUnitPlatform {
+            includeEngines("junit-jupiter") // Explicitly include JUnit Jupiter engine
+        }
+        maxHeapSize = "1G"
+        testLogging {
+            events("passed", "skipped", "failed") // Ensure all test events are logged
+            showStandardStreams = true // Enable standard stream logging
+        }
+        finalizedBy(jacocoTestReport) // Ensure Jacoco report is generated after tests
+    }
+    
+    jacocoTestReport {
+        dependsOn(test) // Ensure tests run before generating the report
+        reports {
+            xml.required.set(true)
+            html.required.set(true)
+            csv.required.set(false)
+        }
+    }
+
+    jacocoTestCoverageVerification {
+        dependsOn(jacocoTestReport) // Ensure report is generated before verification
+        violationRules {
+            rule {
+                limit {
+                    minimum = "0.70".toBigDecimal()
+                }
+            }
+            rule {
+                element = "CLASS"
+                limit {
+                    counter = "LINE"
+                    value = "COVEREDRATIO"
+                    minimum = "0.70".toBigDecimal()
+                }
+                includes = listOf("com.technology.ncode.GoogleThis.*") // Ensure correct package is included
+            }
+        }
+    }
+
+    check {
+        dependsOn(jacocoTestCoverageVerification) // Ensure coverage verification is part of the build
     }
 }
