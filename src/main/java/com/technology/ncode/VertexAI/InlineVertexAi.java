@@ -52,7 +52,11 @@ public class InlineVertexAi {
             """;
 
     public ApiFuture<GenerateContentResponse> generateContentAsync(String prompt) throws IOException {
-        try (VertexAI vertexAi = new VertexAI(PROJECT_ID, LOCATION);) {
+        if (prompt == null || prompt.trim().isEmpty()) {
+            throw new IllegalArgumentException("Prompt cannot be null or empty");
+        }
+
+        try (VertexAI vertexAi = new VertexAI(PROJECT_ID, LOCATION)) {
             GenerationConfig generationConfig = GenerationConfig.newBuilder()
                     .setTemperature(0.3f)
                     .setMaxOutputTokens(300)
@@ -73,7 +77,11 @@ public class InlineVertexAi {
     }
 
     public GenerateContentResponse generateContent(String prompt) throws IOException {
-        try (VertexAI vertexAi = new VertexAI(PROJECT_ID, LOCATION);) {
+        if (prompt == null || prompt.trim().isEmpty()) {
+            throw new IllegalArgumentException("Prompt cannot be null or empty");
+        }
+
+        try (VertexAI vertexAi = new VertexAI(PROJECT_ID, LOCATION)) {
             GenerationConfig generationConfig = GenerationConfig.newBuilder()
                     .setTemperature(0.3f)
                     .setMaxOutputTokens(300)
@@ -106,24 +114,18 @@ public class InlineVertexAi {
 
         // Get content parts
         Content content = candidate.getContent();
-        List<Part> parts = content.getPartsList();
-
-        if (parts.isEmpty()) {
+        if (content == null || content.getPartsList().isEmpty()) {
             return null;
         }
 
         StringBuilder sb = new StringBuilder();
-        for (Part part : parts) {
+        for (Part part : content.getPartsList()) {
             if (part.hasText()) {
                 sb.append(part.getText());
             }
         }
 
-        if (sb.length() == 0) {
-            return null;
-        }
-
-        return sb.toString();
+        return sb.length() > 0 ? sb.toString() : null;
     }
 
 }

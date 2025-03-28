@@ -161,7 +161,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         return Result.CONTINUE;
     }
 
-    private void processCompletion(Project project, Editor editor) {
+    public void processCompletion(Project project, Editor editor) {
         // Avoid processing if editor is disposed or project is closed
         if (project.isDisposed() || editor.isDisposed()) {
             return;
@@ -279,7 +279,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         }
     }
 
-    private void cleanupCurrentCompletion(Editor editor, boolean wasAccepted) {
+    public void cleanupCurrentCompletion(Editor editor, boolean wasAccepted) {
         // Report metrics for current suggestion if they haven't been reported yet
         if (completionState != null && !metricsReported.getAndSet(true)) {
             UsageMetricsReporter.reportEditorMetrics(editor, completionState.text, wasAccepted);
@@ -504,7 +504,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
      * After DEBOUNCE_DELAY_MS milliseconds of inactivity, the task will be
      * executed.
      */
-    private void debounce(Runnable task, int delayMs) {
+    public void debounce(Runnable task, int delayMs) {
         ScheduledFuture<?> oldTask = pendingTask.getAndSet(null);
         if (oldTask != null && !oldTask.isDone()) {
             oldTask.cancel(false);
@@ -530,5 +530,9 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
 
         // Ensure we clean up any UI components
         completionState = null;
+    }
+
+    public CompletionState getCompletionState() {
+        return completionState;
     }
 }

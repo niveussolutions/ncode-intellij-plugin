@@ -38,6 +38,10 @@ public class DocumentationVertexAi {
             """;
 
     public void generateContentStream(String prompt, Consumer<String> onNext) throws IOException {
+        if (prompt == null || prompt.trim().isEmpty()) {
+            throw new IllegalArgumentException("Prompt cannot be null or empty");
+        }
+
         try (VertexAI vertexAi = new VertexAI(PROJECT_ID, LOCATION)) {
             GenerationConfig generationConfig = GenerationConfig.newBuilder()
                     .setTemperature(0.3f)
