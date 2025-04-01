@@ -193,7 +193,7 @@ public class UsageMetricsReporter {
      * @param valueType The type of value to retrieve (e.g., "project", "account")
      * @return The retrieved value, or an empty string if retrieval failed
      */
-    private static String getValueFromGcloud(String valueType) {
+    public static String getValueFromGcloud(String valueType) {
         try {
             Process process = new ProcessBuilder("gcloud", "config", "get-value", valueType)
                     .redirectErrorStream(true)
@@ -231,7 +231,7 @@ public class UsageMetricsReporter {
      * 
      * @return The retrieved email, or an empty string if retrieval failed
      */
-    private static String getEmailFromGcloudAuthList() {
+    static String getEmailFromGcloudAuthList() {
         try {
             Process process = new ProcessBuilder("gcloud", "auth", "list")
                     .redirectErrorStream(true)

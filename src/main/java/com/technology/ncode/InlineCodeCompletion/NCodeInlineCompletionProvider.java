@@ -86,7 +86,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
     private AtomicBoolean metricsReported = new AtomicBoolean(false);
 
     // We're using static inner classes to improve memory efficiency
-    private static class CompletionState {
+    public static class CompletionState {
         final String text;
         final int offset;
         final RangeHighlighter highlighter;
@@ -123,7 +123,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         );
     }
 
-    private void setupEditorListeners(Editor editor) {
+    public void setupEditorListeners(Editor editor) {
         // Create and install document listener
         documentListener = new DocumentListener() {
             @Override
@@ -199,7 +199,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         });
     }
 
-    private void generateCompletion(Editor editor, int offset, String surroundingLines) {
+    public void generateCompletion(Editor editor, int offset, String surroundingLines) {
         // Skip if we're already showing a completion
         if (completionState != null) {
             return;
@@ -461,7 +461,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         }
     }
 
-    private String getSurroundingLines(Editor editor) {
+    public String getSurroundingLines(Editor editor) {
         CaretModel caretModel = editor.getCaretModel();
         int currentLine = caretModel.getLogicalPosition().line;
         int currentOffset = caretModel.getOffset();
