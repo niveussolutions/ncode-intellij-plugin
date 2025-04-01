@@ -292,10 +292,15 @@ public class DisplayQuestionToolWindowContent extends JPanel {
     }
 
     public void setSelectedCode(String code) {
-        SwingUtilities.invokeLater(() -> {
+        if (SwingUtilities.isEventDispatchThread()) {
             selectedCodeArea.setText(code);
             chatOutputArea.setText("");
-        });
+        } else {
+            SwingUtilities.invokeLater(() -> {
+                selectedCodeArea.setText(code);
+                chatOutputArea.setText("");
+            });
+        }
     }
 
     private void appendNCodeMessage(String text) {
@@ -323,5 +328,9 @@ public class DisplayQuestionToolWindowContent extends JPanel {
             }
             chatOutputArea.setCaretPosition(doc.getLength());
         });
+    }
+
+    public String getSelectedCode() {
+        return selectedCodeArea.getText();
     }
 }

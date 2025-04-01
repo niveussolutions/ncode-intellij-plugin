@@ -47,13 +47,15 @@ public class AskAQuestionVertexAi {
                             ContentMaker.fromString(SYSTEM_PROMPT))
                     .build();
 
-            model.generateContentStream(prompt)
-                    .forEach(response -> {
-                        String text = extractGeneratedText(response);
-                        if (text != null && !text.isEmpty()) {
-                            onNext.accept(text);
-                        }
-                    });
+            var responseStream = model.generateContentStream(prompt);
+            if (responseStream != null) {
+                responseStream.forEach(response -> {
+                    String text = extractGeneratedText(response);
+                    if (text != null && !text.isEmpty()) {
+                        onNext.accept(text);
+                    }
+                });
+            }
         }
     }
 

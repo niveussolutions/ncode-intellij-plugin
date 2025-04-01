@@ -55,16 +55,19 @@ public class GenerateTestCaseFactoryContent extends JPanel {
 
     public void setSelectedCode(String code) {
         SwingUtilities.invokeLater(() -> {
-            selectedCodeArea.setText(code);
+            selectedCodeArea.setText(code != null ? code : ""); // Handle null input
             selectedCodeArea.setCaretPosition(0);
         });
 
-        // Display waiting message
-        SwingUtilities.invokeLater(() -> {
-            chatOutputArea.setText("Fetching test cases, please wait...");
-            chatOutputArea.setForeground(Color.GRAY);
-            chatOutputArea.setFont(new Font("Monospaced", Font.ITALIC, 14));
-        });
+        // Immediately set the waiting message
+        chatOutputArea.setText("Fetching test cases, please wait...");
+        chatOutputArea.setForeground(Color.GRAY);
+        chatOutputArea.setFont(new Font("Monospaced", Font.ITALIC, 14));
+
+        if (code == null || code.trim().isEmpty()) {
+            SwingUtilities.invokeLater(() -> chatOutputArea.setText("No code provided."));
+            return;
+        }
 
         // Fetch test case output dynamically in a separate thread
         new Thread(() -> {
@@ -105,44 +108,4 @@ public class GenerateTestCaseFactoryContent extends JPanel {
     public JPanel getPanel() {
         return this;
     }
-
-    /*
-     * // New implementation using TestCaseCodeVertexAi
-     * public void setSelectedCode(String code) {
-     * SwingUtilities.invokeLater(() -> {
-     * selectedCodeArea.setText(code);
-     * selectedCodeArea.setCaretPosition(0);
-     * });
-     * 
-     * // Display waiting message
-     * SwingUtilities.invokeLater(() -> {
-     * chatOutputArea.setText("Fetching test cases, please wait...");
-     * chatOutputArea.setForeground(Color.GRAY);
-     * chatOutputArea.setFont(new Font("Monospaced", Font.ITALIC, 14));
-     * });
-     * 
-     * // Fetch test case output dynamically in a separate thread using the new
-     * TestCaseCodeVertexAi class
-     * new Thread(() -> {
-     * TestCaseCodeVertexAi testCaseCodeVertexAi = new TestCaseCodeVertexAi();
-     * StringBuilder testCaseOutputBuilder = new StringBuilder();
-     * 
-     * try {
-     * testCaseCodeVertexAi.generateContentStream(code, text -> {
-     * SwingUtilities.invokeLater(() -> {
-     * testCaseOutputBuilder.append(text);
-     * chatOutputArea.setText(testCaseOutputBuilder.toString());
-     * chatOutputArea.setForeground(Color.WHITE);
-     * chatOutputArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
-     * chatOutputArea.setCaretPosition(0);
-     * });
-     * });
-     * } catch (IOException e) {
-     * e.printStackTrace();
-     * SwingUtilities.invokeLater(() ->
-     * chatOutputArea.setText("Error generating test cases."));
-     * }
-     * }).start();
-     * }
-     */
 }

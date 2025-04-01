@@ -39,26 +39,29 @@ public class DisplayQuestionAction extends AnAction {
             toolWindow = toolWindowManager.registerToolWindow("DisplayQuestionToolWindow", true,
                     ToolWindowAnchor.RIGHT);
         } else {
-            toolWindowManager.getToolWindow("DisplayQuestionToolWindow").setAnchor(ToolWindowAnchor.RIGHT, null);
+            toolWindow.setAnchor(ToolWindowAnchor.RIGHT, null); // Avoid redundant getToolWindow call
         }
 
-        // Ensure content is added properly
-        if (toolWindow.getContentManager().getContentCount() == 0) {
-            DisplayQuestionToolWindowContent contentPanel = new DisplayQuestionToolWindowContent();
-            ContentFactory contentFactory = ContentFactory.getInstance();
-            Content content = contentFactory.createContent(contentPanel.getPanel(), "", false);
-            toolWindow.getContentManager().addContent(content);
-        }
+        if (toolWindow != null && toolWindow.getContentManager() != null) {
+            // Ensure content is added properly
+            if (toolWindow.getContentManager().getContentCount() == 0) {
+                DisplayQuestionToolWindowContent contentPanel = new DisplayQuestionToolWindowContent();
+                ContentFactory contentFactory = ContentFactory.getInstance();
+                Content content = contentFactory.createContent(contentPanel.getPanel(), "", false);
+                toolWindow.getContentManager().addContent(content);
+            }
 
-        // Update content with selected code
-        Content content = toolWindow.getContentManager().getContent(0);
-        if (content != null && content.getComponent() instanceof DisplayQuestionToolWindowContent) {
-            DisplayQuestionToolWindowContent contentPanel = (DisplayQuestionToolWindowContent) content.getComponent();
-            contentPanel.setSelectedCode(selectedText);
-        }
+            // Update content with selected code
+            Content content = toolWindow.getContentManager().getContent(0);
+            if (content != null && content.getComponent() instanceof DisplayQuestionToolWindowContent) {
+                DisplayQuestionToolWindowContent contentPanel = (DisplayQuestionToolWindowContent) content
+                        .getComponent();
+                contentPanel.setSelectedCode(selectedText);
+            }
 
-        // Activate the tool window
-        toolWindow.activate(null);
+            // Activate the tool window
+            toolWindow.activate(null);
+        }
     }
 
 }

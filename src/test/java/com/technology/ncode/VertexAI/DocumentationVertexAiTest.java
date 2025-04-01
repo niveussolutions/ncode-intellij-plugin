@@ -47,6 +47,11 @@ class DocumentationVertexAiTest {
                             when(mockIterator.hasNext()).thenReturn(true, false);
                             when(mockIterator.next()).thenReturn(mockResponse);
                             when(mockResponseStream.iterator()).thenReturn(mockIterator);
+                            doAnswer(invocation -> {
+                                Consumer<GenerateContentResponse> consumer = invocation.getArgument(0);
+                                consumer.accept(mockResponse);
+                                return null;
+                            }).when(mockResponseStream).forEach(any());
                             when(mock.generateContentStream(testPrompt)).thenReturn(mockResponseStream);
                         })) {
 

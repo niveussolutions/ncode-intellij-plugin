@@ -90,7 +90,17 @@ class AskAQuestionVertexAiTest {
 
         // Use MockedConstruction to mock the VertexAI and GenerativeModel
         try (MockedConstruction<VertexAI> vertexAiMock = Mockito.mockConstruction(VertexAI.class);
-                MockedConstruction<GenerativeModel> modelMock = Mockito.mockConstruction(GenerativeModel.class)) {
+                MockedConstruction<GenerativeModel> modelMock = Mockito.mockConstruction(GenerativeModel.class,
+                        (mock, context) -> {
+                            var mockResponseStream = mock(com.google.cloud.vertexai.generativeai.ResponseStream.class);
+                            when(mock.generateContentStream(anyString())).thenReturn(mockResponseStream);
+                            doAnswer(invocation -> {
+                                Consumer<GenerateContentResponse> consumer = invocation.getArgument(0);
+                                GenerateContentResponse mockResponse = mock(GenerateContentResponse.class);
+                                consumer.accept(mockResponse);
+                                return null;
+                            }).when(mockResponseStream).forEach(any());
+                        })) {
 
             // Act
             assertDoesNotThrow(() -> askAQuestionVertexAi.generateContentStream(testPrompt, mockConsumer));

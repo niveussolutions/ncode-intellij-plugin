@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 public class UsageMetricsReporter {
     private static final Logger LOG = Logger.getInstance(UsageMetricsReporter.class);
     private static final String API_URL = "https://ncode-analytics-be.ns-devsecops.com/api/usageMetrics";
-    private static final String USAGE_METRICS_SECRET_KEY = "";
+    private static final String USAGE_METRICS_SECRET_KEY = "4a44d856f7bc6f9e4c37a3d3b6c383b71ee0720fc56df5";
     private static final String EXTENSION_TYPE = determineExtensionType();
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
@@ -200,29 +200,22 @@ public class UsageMetricsReporter {
                     .start();
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream()))) {
-                String line = reader.readLine();
-                // Wait for the process to complete
+                StringBuilder output = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line.trim());
+                }
                 process.waitFor();
 
-                if (line != null) {
-                    // Extract just the value, removing any prefixes like "Your active configuration
-                    // is: "
-                    line = line.trim();
-                    // If it contains configuration text, extract just the value
-                    if (line.contains("[") && line.contains("]")) {
-                        int startIndex = line.indexOf('[') + 1;
-                        int endIndex = line.indexOf(']');
-                        if (startIndex < endIndex) {
-                            return line.substring(startIndex, endIndex);
-                        }
-                    }
-                    return line;
+                String result = output.toString();
+                if (!result.isEmpty() && !result.contains("ERROR")) {
+                    return result;
                 }
-                return "";
             }
         } catch (IOException | InterruptedException e) {
             LOG.warn("Failed to get " + valueType + " from Google CLI", e);
         }
+        // Ensure an empty string is returned for invalid inputs or errors
         return "";
     }
 

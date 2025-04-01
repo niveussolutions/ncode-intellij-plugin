@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "1.9.25"
     id("org.jetbrains.intellij") version "1.17.4"
     id("jacoco")
+    id("org.sonarqube") version "5.0.0.4638"
 }
 
 group = "com.technology"
@@ -99,5 +100,15 @@ tasks {
 
     check {
         dependsOn(jacocoTestCoverageVerification) // Ensure coverage verification is part of the build
+    }
+}
+
+sonarqube {
+    properties {
+        property("sonar.projectKey", "intellij-plugin")
+        property("sonar.projectName", "intellij-plugin")
+        property("sonar.host.url", "https://sonar.niveussolutions.com")
+        property("sonar.junit.reportPaths", "build/test-results/test") // Ensure test reports path is correct
+        property("sonar.scm.provider", "git") // Enable blame information using Git
     }
 }

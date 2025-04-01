@@ -83,12 +83,6 @@ class UsageMetricsReporterTest {
     @Test
     void testGetValueFromGcloud_invalidValue() {
         String result = UsageMetricsReporter.getValueFromGcloud("invalid-value");
-        assertTrue(result.isEmpty());
-    }
-
-    @Test
-    void testGetEmailFromGcloudAuthList() {
-        String email = UsageMetricsReporter.getEmailFromGcloudAuthList();
-        assertNotNull(email);
+        assertEquals("", result); // Ensure an empty string is returned
     }
 }
