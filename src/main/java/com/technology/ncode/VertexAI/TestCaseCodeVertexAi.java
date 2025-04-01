@@ -43,6 +43,14 @@ public class TestCaseCodeVertexAi {
             """;
 
     public void generateContentStream(String prompt, Consumer<String> onNext) throws IOException {
+        if (prompt == null) {
+            throw new IllegalArgumentException("Prompt cannot be null");
+        }
+
+        if (prompt.trim().isEmpty()) {
+            throw new IOException("Prompt cannot be empty or contain only whitespace");
+        }
+
         try (VertexAI vertexAi = new VertexAI(PROJECT_ID, LOCATION)) {
             GenerationConfig generationConfig = GenerationConfig.newBuilder()
                     .setTemperature(0.3f)
