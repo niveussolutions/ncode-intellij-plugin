@@ -16,20 +16,22 @@ public class GenerateDocumentation extends AnAction {
     public void actionPerformed(@NotNull AnActionEvent e) {
         // Get the current project
         Project project = e.getProject();
-        if (project == null)
+        if (project == null) {
             return;
+        }
 
         // Get the editor
         Editor editor = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.EDITOR);
-        if (editor == null)
+        if (editor == null) {
             return;
+        }
 
         // Get selected text
         SelectionModel selectionModel = editor.getSelectionModel();
-        String selectedText = selectionModel.getSelectedText();
+        String selectedText = (selectionModel != null) ? selectionModel.getSelectedText() : null;
 
-        // Ensure selectedText is not null
-        if (selectedText == null || selectedText.isEmpty()) {
+        // Ensure selectedText is not null or empty
+        if (selectedText == null || selectedText.trim().isEmpty()) {
             return;
         }
 
@@ -39,6 +41,11 @@ public class GenerateDocumentation extends AnAction {
         if (toolWindow == null) {
             toolWindow = ToolWindowManager.getInstance(project).registerToolWindow("GenerateDocumentationToolWindow",
                     true, ToolWindowAnchor.RIGHT);
+        }
+
+        // Ensure the tool window component is initialized
+        if (toolWindow.getComponent() == null) {
+            return; // Exit if the tool window component is not available
         }
 
         // Pass the selected text to the tool window content
