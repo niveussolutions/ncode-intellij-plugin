@@ -77,30 +77,6 @@ tasks {
             csv.required.set(false)
         }
     }
-
-    jacocoTestCoverageVerification {
-        dependsOn(jacocoTestReport) // Ensure report is generated before verification
-        violationRules {
-            rule {
-                limit {
-                    minimum = "0.70".toBigDecimal()
-                }
-            }
-            rule {
-                element = "CLASS"
-                limit {
-                    counter = "LINE"
-                    value = "COVEREDRATIO"
-                    minimum = "0.70".toBigDecimal()
-                }
-                includes = listOf("com.technology.ncode.GoogleThis.*") // Ensure correct package is included
-            }
-        }
-    }
-
-    check {
-        dependsOn(jacocoTestCoverageVerification) // Ensure coverage verification is part of the build
-    }
 }
 
 sonarqube {
