@@ -41,8 +41,9 @@ dependencies {
     implementation("com.google.auth:google-auth-library-oauth2-http:1.21.0")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
-    testImplementation("org.mockito:mockito-core:4.11.0")
-    testImplementation("org.mockito:mockito-junit-jupiter:4.11.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
+    testImplementation("org.mockito:mockito-core:5.6.0")
+    testImplementation("org.mockito:mockito-junit-jupiter:5.6.0")
 }
 
 // Configure Gradle IntelliJ Plugin
@@ -83,40 +84,22 @@ tasks {
         }
         maxHeapSize = "1G"
         testLogging {
-            events("passed", "skipped", "failed")
-            showStandardStreams = true
+            events("passed", "skipped", "failed") // Log test execution details
+            showStandardStreams = true // Show standard output and error streams
         }
     }
-    
+
     jacocoTestReport {
         dependsOn(test) // Ensure tests run before generating the report
-        
         reports {
             xml.required.set(true)
             html.required.set(true)
-            csv.required.set(false)
         }
-        
-        // Configure JaCoCo to exclude UI classes and generated code
-        classDirectories.setFrom(
-            files(classDirectories.files.map {
-                fileTree(it) {
-                    exclude(
-                        "**/generated/**",
-                        "**/*Form*",
-                        "**/*Dialog*",
-                        "**/*Ui*"
-                    )
-                }
-            })
-        )
-        
-        // Ensure the report is generated in the correct location
         executionData.from(fileTree(project.buildDir) {
-            include("jacoco/test.exec")
+            include("jacoco/test.exec") // Ensure execution data is captured
         })
     }
-    
+
     // Create a dedicated task to ensure proper task ordering
     register("analyzeCoverage") {
         dependsOn("test", "jacocoTestReport", "sonarqube")
@@ -124,7 +107,7 @@ tasks {
             println("Code coverage analysis completed")
         }
     }
-    
+
     // Configure sonarqube task to run after JaCoCo
     named("sonarqube") {
         dependsOn("jacocoTestReport")
