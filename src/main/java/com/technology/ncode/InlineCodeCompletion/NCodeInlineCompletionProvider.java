@@ -1,20 +1,42 @@
 package com.technology.ncode.InlineCodeCompletion;
 
+import java.awt.Color;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.util.Optional;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.swing.SwingUtilities;
+
+import org.jetbrains.annotations.NotNull;
+
 import com.google.api.core.ApiFuture;
 import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.intellij.codeInsight.editorActions.TypedHandlerDelegate;
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.actionSystem.*;
+import com.intellij.openapi.actionSystem.ActionManager;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.IdeActions;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.CaretModel;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.ScrollType;
 import com.intellij.openapi.editor.colors.EditorColors;
 import com.intellij.openapi.editor.colors.EditorColorsManager;
 import com.intellij.openapi.editor.colors.EditorColorsScheme;
-import com.intellij.openapi.editor.event.*;
+import com.intellij.openapi.editor.event.DocumentEvent;
+import com.intellij.openapi.editor.event.DocumentListener;
+import com.intellij.openapi.editor.event.EditorFactoryAdapter;
+import com.intellij.openapi.editor.event.EditorFactoryEvent;
 import com.intellij.openapi.editor.markup.HighlighterLayer;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.RangeHighlighter;
@@ -24,25 +46,6 @@ import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiFile;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import com.technology.ncode.VertexAI.InlineVertexAi;
-
-import org.jetbrains.annotations.NotNull;
-
-import javax.swing.*;
-import java.awt.Color;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.util.Optional;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Provides inline code completion functionality using Vertex AI.
@@ -102,10 +105,6 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
         void cleanup(Editor editor) {
             if (highlighter != null && highlighter.isValid()) {
                 editor.getMarkupModel().removeHighlighter(highlighter);
-            }
-
-            if (tabAction != null) {
-                tabAction.unregisterCustomShortcutSet(editor.getContentComponent());
             }
         }
     }
@@ -207,24 +206,22 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
 
         InlineVertexAi inlineVertexAi = new InlineVertexAi();
         try {
-            ApiFuture<GenerateContentResponse> future = inlineVertexAi.generateContentAsync(surroundingLines);
+            // Run the API call in a background thread
+            ApplicationManager.getApplication().executeOnPooledThread(() -> {
+                try {
+                    ApiFuture<GenerateContentResponse> future = inlineVertexAi.generateContentAsync(surroundingLines);
+                    GenerateContentResponse response = future.get();
 
-            // Handle the future response asynchronously
-            ListenableFuture<GenerateContentResponse> listenableFuture = Futures.immediateFuture(future.get());
-            Futures.addCallback(listenableFuture, new FutureCallback<GenerateContentResponse>() {
-                @Override
-                public void onSuccess(GenerateContentResponse response) {
                     String generatedText = InlineVertexAi.extractGeneratedText(response);
 
                     if (generatedText != null && !generatedText.isEmpty()) {
-                        // Schedule modifications on the EDT and wrap them in a write action
+                        // Schedule UI updates on the EDT
                         ApplicationManager.getApplication().invokeLater(() -> {
                             if (editor.isDisposed()) {
                                 return;
                             }
                             WriteCommandAction.runWriteCommandAction(editor.getProject(), () -> {
                                 try {
-                                    // Insert the completion text at the caret
                                     Document document = editor.getDocument();
 
                                     // Temporarily remove document listener to avoid recursive triggering
@@ -239,18 +236,15 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                                         document.addDocumentListener(documentListener);
                                     }
 
-                                    // Reset the metrics reported flag for this new suggestion
-                                    metricsReported.set(false);
-
                                     // Apply transparent highlighting
                                     RangeHighlighter highlighter = applyTransparentHighlighting(editor, offset,
                                             offset + generatedText.length());
 
-                                    // Install custom action for tab
-                                    AnAction tabAction = installTabCompletionAction(editor, offset, generatedText);
-
-                                    // Install the key listener for handling other keys
+                                    // Install the key listener for handling keys
                                     installKeyListener(editor, offset, generatedText);
+
+                                    // Install the tab action for accepting the completion
+                                    AnAction tabAction = installTabCompletionAction(editor, offset, generatedText);
 
                                     // Store the completion state
                                     completionState = new CompletionState(
@@ -258,24 +252,24 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                                             offset,
                                             highlighter,
                                             tabAction);
+
                                 } catch (Exception e) {
                                     LOG.error("Error processing completion after async retrieval", e);
                                     cleanupCurrentCompletion(editor, false);
                                 }
                             });
                         });
-                    } else {
-                        LOG.warn("No valid completion generated. Raw response: " + response);
                     }
+                } catch (Exception e) {
+                    LOG.error("Error during completion generation", e);
+                    ApplicationManager.getApplication().invokeLater(() -> {
+                        cleanupCurrentCompletion(editor, false);
+                    });
                 }
-
-                @Override
-                public void onFailure(Throwable t) {
-                    LOG.warn("Error calling Vertex AI asynchronously", t);
-                }
-            }, MoreExecutors.directExecutor());
+            });
         } catch (Exception e) {
             LOG.error("Unexpected error during completion generation", e);
+            cleanupCurrentCompletion(editor, false);
         }
     }
 
@@ -337,39 +331,6 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                 HighlighterTargetArea.EXACT_RANGE);
     }
 
-    private AnAction installTabCompletionAction(Editor editor, int offset, String generatedText) {
-        ActionManager actionManager = ActionManager.getInstance();
-        AnAction defaultTabAction = actionManager.getAction(IdeActions.ACTION_EDITOR_TAB);
-
-        AnAction tabAction = new AnAction() {
-            @Override
-            public void actionPerformed(@NotNull AnActionEvent e) {
-                // Calculate the position at the end of the generated text
-                int endPosition = offset + generatedText.length();
-
-                // Set the flag to prevent immediate suggestion after acceptance
-                setSuggestionJustAccepted(true);
-
-                // Move the caret to the end of the generated text
-                editor.getCaretModel().moveToOffset(endPosition);
-
-                // Clean up and report metrics for an accepted suggestion
-                cleanupCurrentCompletion(editor, true);
-            }
-
-            @Override
-            public void update(@NotNull AnActionEvent e) {
-                e.getPresentation().setEnabled(true);
-            }
-        };
-
-        tabAction.registerCustomShortcutSet(
-                defaultTabAction.getShortcutSet(),
-                editor.getContentComponent());
-
-        return tabAction;
-    }
-
     private void installKeyListener(Editor editor, int offset, String generatedText) {
         // Remove any existing listener
         if (activeKeyListener != null) {
@@ -403,6 +364,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                             document.removeDocumentListener(documentListener);
                         }
 
+                        // Delete the suggested text
                         int endOffset = offset + generatedText.length();
                         if (endOffset <= document.getTextLength()) {
                             document.deleteString(offset, endOffset);
@@ -411,6 +373,18 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                         // Re-add document listener
                         if (documentListener != null) {
                             document.addDocumentListener(documentListener);
+                        }
+
+                        // Move the caret to the original position
+                        editor.getCaretModel().moveToOffset(offset);
+
+                        // If it's a Backspace key, we need to handle the deletion of the character
+                        // before the suggestion
+                        if (e.getKeyCode() == KeyEvent.VK_BACK_SPACE && offset > 0) {
+                            // Delete the character before the suggestion
+                            document.deleteString(offset - 1, offset);
+                            // Move the caret back one position
+                            editor.getCaretModel().moveToOffset(offset - 1);
                         }
                     } catch (Exception ex) {
                         LOG.error("Error removing completion text", ex);
@@ -437,6 +411,50 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
 
         // Add the key listener to the editor component
         editor.getContentComponent().addKeyListener(activeKeyListener);
+    }
+
+    private void acceptCompletion(Editor editor, int offset, String completionText) {
+        Project project = editor.getProject();
+        if (project == null || project.isDisposed())
+            return;
+
+        WriteCommandAction.runWriteCommandAction(project, () -> {
+            try {
+                Document document = editor.getDocument();
+
+                // First, remove the completion text
+                int endOffset = offset + completionText.length();
+                if (endOffset <= document.getTextLength()) {
+                    // Temporarily remove document listener
+                    if (documentListener != null) {
+                        document.removeDocumentListener(documentListener);
+                    }
+
+                    // Delete and reinsert the text to ensure it's properly committed
+                    document.deleteString(offset, endOffset);
+                    document.insertString(offset, completionText);
+
+                    // Re-add document listener
+                    if (documentListener != null) {
+                        document.addDocumentListener(documentListener);
+                    }
+
+                    // Move cursor to end of inserted text
+                    int newOffset = offset + completionText.length();
+                    editor.getCaretModel().moveToOffset(newOffset);
+                    editor.getScrollingModel().scrollToCaret(ScrollType.MAKE_VISIBLE);
+                }
+
+                // Set the flag to prevent immediate suggestion after acceptance
+                setSuggestionJustAccepted(true);
+
+                // Clean up and report metrics
+                cleanupCurrentCompletion(editor, true);
+            } catch (Exception ex) {
+                LOG.error("Error accepting completion", ex);
+                cleanupCurrentCompletion(editor, false);
+            }
+        });
     }
 
     /**
@@ -530,5 +548,39 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
 
         // Ensure we clean up any UI components
         completionState = null;
+    }
+
+    private AnAction installTabCompletionAction(Editor editor, int offset, String generatedText) {
+        ActionManager actionManager = ActionManager.getInstance();
+        AnAction defaultTabAction = actionManager.getAction(IdeActions.ACTION_EDITOR_TAB);
+
+        AnAction tabAction = new AnAction() {
+            @Override
+            public void actionPerformed(@NotNull AnActionEvent e) {
+                // Calculate the position at the end of the generated text
+                int endPosition = offset + generatedText.length();
+
+                // Set the flag to prevent immediate suggestion after acceptance
+                setSuggestionJustAccepted(true);
+
+                // Move the caret to the end of the generated text
+                editor.getCaretModel().moveToOffset(endPosition);
+                editor.getScrollingModel().scrollToCaret(ScrollType.CENTER);
+
+                // Clean up and report metrics for an accepted suggestion
+                cleanupCurrentCompletion(editor, true);
+            }
+
+            @Override
+            public void update(@NotNull AnActionEvent e) {
+                e.getPresentation().setEnabled(true);
+            }
+        };
+
+        tabAction.registerCustomShortcutSet(
+                defaultTabAction.getShortcutSet(),
+                editor.getContentComponent());
+
+        return tabAction;
     }
 }
