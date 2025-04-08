@@ -79,14 +79,12 @@ tasks {
     }
 
     test {
-        useJUnitPlatform {
-            includeEngines("junit-jupiter")
-        }
-        maxHeapSize = "1G"
-        testLogging {
-            events("passed", "skipped", "failed") // Log test execution details
-            showStandardStreams = true // Show standard output and error streams
-        }
+        useJUnitPlatform()
+        finalizedBy(jacocoTestReport)
+        extensions.configure(JacocoTaskExtension::class.java) {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+      }
     }
 
     jacocoTestReport {
