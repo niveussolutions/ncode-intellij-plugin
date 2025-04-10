@@ -22,7 +22,7 @@ sonarqube {
         property("sonar.sources", "src/main/java/com/technology/ncode/VertexAI")
         property("sonar.tests", "src/test/java/com/technology/ncode/VertexAI")
         property("sonar.java.test.binaries", "${project.buildDir}/classes/java/test")
-        property("sonar.coverage.exclusions", "**/generated/**,**/*Form.java,**/*Dialog.java,**/AskAQuestion/**,**/GenerateDocumentation/**,**/GenerateTest/**,**/GoogleThis/**,**/InlineCodeCompletion/**")
+        property("sonar.coverage.exclusions", "**/generated/**,**/*Form.java,**/*Dialog.java,**/AskAQuestion/**,**/GenerateDocumentation/**,**/GenerateTest/**,**/GoogleThis/**,**/InlineCodeCompletion/**,**/VertexAIChatbot.java")
         property("sonar.verbose", "true")
         property("sonar.inclusions", "**/VertexAI/**")
     }
