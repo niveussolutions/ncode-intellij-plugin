@@ -19,11 +19,12 @@ sonarqube {
         property("sonar.java.binaries", "${project.buildDir}/classes/java/main")
         property("sonar.junit.reportPaths", "${project.buildDir}/test-results/test")
         property("sonar.coverage.jacoco.xmlReportPaths", "${project.buildDir}/reports/jacoco/test/jacocoTestReport.xml")
-        property("sonar.sources", "src/main/java")
-        property("sonar.tests", "src/test/java")
+        property("sonar.sources", "src/main/java/com/technology/ncode/VertexAI")
+        property("sonar.tests", "src/test/java/com/technology/ncode/VertexAI")
         property("sonar.java.test.binaries", "${project.buildDir}/classes/java/test")
-        property("sonar.coverage.exclusions", "**/generated/**,**/*Form.java,**/*Dialog.java")
+        property("sonar.coverage.exclusions", "**/generated/**,**/*Form.java,**/*Dialog.java,**/AskAQuestion/**,**/GenerateDocumentation/**,**/GenerateTest/**,**/GoogleThis/**,**/InlineCodeCompletion/**")
         property("sonar.verbose", "true")
+        property("sonar.inclusions", "**/VertexAI/**")
     }
 }
 
@@ -95,13 +96,19 @@ tasks {
         }
         
         classDirectories.setFrom(sourceSets.main.get().output.asFileTree.matching {
+            include("**/VertexAI/**")
             exclude(
                 "**/test/**",
                 "**/generated/**",
                 "**/*Form*",
                 "**/*Dialog*",
                 "**/*ToolWindowContent*",
-                "**/*ToolWindowFactory*"
+                "**/*ToolWindowFactory*",
+                "**/AskAQuestion/**",
+                "**/GenerateDocumentation/**",
+                "**/GenerateTest/**",
+                "**/GoogleThis/**",
+                "**/InlineCodeCompletion/**"
             )
         })
         
