@@ -93,6 +93,18 @@ tasks {
             xml.required.set(true)
             html.required.set(true)
         }
+        
+        classDirectories.setFrom(sourceSets.main.get().output.asFileTree.matching {
+            exclude(
+                "**/test/**",
+                "**/generated/**",
+                "**/*Form*",
+                "**/*Dialog*",
+                "**/*ToolWindowContent*",
+                "**/*ToolWindowFactory*"
+            )
+        })
+        
         executionData.from(fileTree(project.buildDir) {
             include("jacoco/test.exec") // Ensure execution data is captured
         })
