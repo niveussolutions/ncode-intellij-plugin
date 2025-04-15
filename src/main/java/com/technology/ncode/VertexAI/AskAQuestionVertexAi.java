@@ -1,5 +1,8 @@
 package com.technology.ncode.VertexAI;
 
+import java.io.IOException;
+import java.util.List;
+
 import com.google.cloud.vertexai.VertexAI;
 import com.google.cloud.vertexai.api.Candidate;
 import com.google.cloud.vertexai.api.Content;
@@ -8,9 +11,6 @@ import com.google.cloud.vertexai.api.GenerationConfig;
 import com.google.cloud.vertexai.api.Part;
 import com.google.cloud.vertexai.generativeai.ContentMaker;
 import com.google.cloud.vertexai.generativeai.GenerativeModel;
-import java.io.IOException;
-import java.util.List;
-import java.util.function.Consumer;
 
 public class AskAQuestionVertexAi {
     private static final String PROJECT_ID = "niveus-ncode";
@@ -30,7 +30,11 @@ public class AskAQuestionVertexAi {
             8. If a user instruction is provided as a comment, then create the corresponding function.
             """;
 
-    public void generateContentStream(String prompt, Consumer<String> onNext) throws IOException {
+    public GenerateContentResponse generateContent(String prompt) throws IOException {
+        if (prompt == null || prompt.trim().isEmpty()) {
+            throw new IllegalArgumentException("Prompt cannot be null or empty");
+        }
+
         try (VertexAI vertexAi = new VertexAI(PROJECT_ID, LOCATION)) {
             GenerationConfig generationConfig = GenerationConfig.newBuilder()
                     .setTemperature(0.3f)
@@ -47,15 +51,7 @@ public class AskAQuestionVertexAi {
                             ContentMaker.fromString(SYSTEM_PROMPT))
                     .build();
 
-            var responseStream = model.generateContentStream(prompt);
-            if (responseStream != null) {
-                responseStream.forEach(response -> {
-                    String text = extractGeneratedText(response);
-                    if (text != null && !text.isEmpty()) {
-                        onNext.accept(text);
-                    }
-                });
-            }
+            return model.generateContent(prompt);
         }
     }
 

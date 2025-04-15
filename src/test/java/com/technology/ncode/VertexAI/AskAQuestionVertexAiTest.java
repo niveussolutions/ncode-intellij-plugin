@@ -1,18 +1,21 @@
 package com.technology.ncode.VertexAI;
 
+import java.io.IOException;
+import java.util.Collections;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.anyString;
+import org.mockito.MockedConstruction;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.google.cloud.vertexai.VertexAI;
 import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.google.cloud.vertexai.generativeai.GenerativeModel;
-import org.junit.jupiter.api.Test;
-import org.mockito.MockedConstruction;
-import org.mockito.Mockito;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.function.Consumer;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class AskAQuestionVertexAiTest {
 
@@ -80,44 +83,44 @@ class AskAQuestionVertexAiTest {
     }
 
     @Test
-    void testGenerateContentStream_validPrompt() throws IOException {
+    void testGenerateContent_validPrompt() throws IOException {
         // Arrange
         AskAQuestionVertexAi askAQuestionVertexAi = new AskAQuestionVertexAi();
-        String testPrompt = "Test prompt for streaming generation";
-
-        // Mock consumer to verify text processing
-        Consumer<String> mockConsumer = mock(Consumer.class);
+        String testPrompt = "Test prompt for generation";
+        GenerateContentResponse mockResponse = mock(GenerateContentResponse.class);
 
         // Use MockedConstruction to mock the VertexAI and GenerativeModel
         try (MockedConstruction<VertexAI> vertexAiMock = Mockito.mockConstruction(VertexAI.class);
                 MockedConstruction<GenerativeModel> modelMock = Mockito.mockConstruction(GenerativeModel.class,
                         (mock, context) -> {
-                            var mockResponseStream = mock(com.google.cloud.vertexai.generativeai.ResponseStream.class);
-                            when(mock.generateContentStream(anyString())).thenReturn(mockResponseStream);
-                            doAnswer(invocation -> {
-                                Consumer<GenerateContentResponse> consumer = invocation.getArgument(0);
-                                GenerateContentResponse mockResponse = mock(GenerateContentResponse.class);
-                                consumer.accept(mockResponse);
-                                return null;
-                            }).when(mockResponseStream).forEach(any());
+                            when(mock.generateContent(anyString())).thenReturn(mockResponse);
                         })) {
 
             // Act
-            assertDoesNotThrow(() -> askAQuestionVertexAi.generateContentStream(testPrompt, mockConsumer));
+            GenerateContentResponse response = askAQuestionVertexAi.generateContent(testPrompt);
 
             // Assert
+            assertEquals(mockResponse, response);
             assertEquals(1, vertexAiMock.constructed().size());
             assertEquals(1, modelMock.constructed().size());
         }
     }
 
     @Test
-    void testGenerateContentStream_nullPrompt() {
+    void testGenerateContent_nullPrompt() {
         // Arrange
         AskAQuestionVertexAi askAQuestionVertexAi = new AskAQuestionVertexAi();
 
         // Act & Assert
-        Consumer<String> mockConsumer = mock(Consumer.class);
-        assertThrows(Exception.class, () -> askAQuestionVertexAi.generateContentStream(null, mockConsumer));
+        assertThrows(IllegalArgumentException.class, () -> askAQuestionVertexAi.generateContent(null));
+    }
+
+    @Test
+    void testGenerateContent_emptyPrompt() {
+        // Arrange
+        AskAQuestionVertexAi askAQuestionVertexAi = new AskAQuestionVertexAi();
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> askAQuestionVertexAi.generateContent(""));
     }
 }

@@ -49,6 +49,7 @@ import javax.swing.text.StyledDocument;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 
+import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.technology.ncode.VertexAI.AskAQuestionVertexAi;
 import com.vladsch.flexmark.ast.BulletList;
 import com.vladsch.flexmark.ast.FencedCodeBlock;
@@ -367,15 +368,17 @@ public class DisplayQuestionToolWindowContent extends JPanel {
                     appendNCodeMessageStart();
                 });
 
-                askAQuestionVertexAi.generateContentStream(prompt, chunk -> {
+                GenerateContentResponse vertexResponse = askAQuestionVertexAi.generateContent(prompt);
+                String responseText = AskAQuestionVertexAi.extractGeneratedText(vertexResponse);
+                if (responseText != null) {
                     SwingUtilities.invokeLater(() -> {
-                        appendNCodeMessageChunk(chunk);
+                        appendNCodeMessageChunk(responseText);
                     });
-                });
+                }
 
-                String response = conversationHistory.get(conversationHistory.size() - 1).message;
+                String conversationResponse = conversationHistory.get(conversationHistory.size() - 1).message;
                 System.out.println("[Response from VertexAI]");
-                System.out.println(response);
+                System.out.println(conversationResponse);
 
                 SwingUtilities.invokeLater(() -> {
                     appendSeparatorLine();
@@ -467,16 +470,15 @@ public class DisplayQuestionToolWindowContent extends JPanel {
                     appendNCodeMessageStart();
                 });
 
-                StringBuilder responseBuilder = new StringBuilder();
-                askAQuestionVertexAi.generateContentStream(prompt, chunk -> {
-                    responseBuilder.append(chunk);
+                GenerateContentResponse vertexResponse = askAQuestionVertexAi.generateContent(prompt);
+                String responseText = AskAQuestionVertexAi.extractGeneratedText(vertexResponse);
+                if (responseText != null) {
                     SwingUtilities.invokeLater(() -> {
-                        appendNCodeMessageChunk(chunk);
+                        appendNCodeMessageChunk(responseText);
                     });
-                });
-
-                // Add the complete response to conversation history
-                conversationHistory.add(new UserConversation("assistant", responseBuilder.toString()));
+                    // Add the complete response to conversation history
+                    conversationHistory.add(new UserConversation("assistant", responseText));
+                }
 
                 SwingUtilities.invokeLater(() -> {
                     appendSeparatorLine();
