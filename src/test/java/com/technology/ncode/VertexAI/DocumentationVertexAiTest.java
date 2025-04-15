@@ -1,32 +1,31 @@
 package com.technology.ncode.VertexAI;
 
+import java.io.IOException;
+import java.util.Collections;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedConstruction;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.google.cloud.vertexai.VertexAI;
 import com.google.cloud.vertexai.api.Candidate;
 import com.google.cloud.vertexai.api.Content;
 import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.google.cloud.vertexai.api.Part;
 import com.google.cloud.vertexai.generativeai.GenerativeModel;
-import com.google.cloud.vertexai.generativeai.ResponseStream;
-import org.junit.jupiter.api.Test;
-import org.mockito.MockedConstruction;
-import org.mockito.Mockito;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class DocumentationVertexAiTest {
 
     @Test
-    void testGenerateContentStream_validPrompt() throws IOException {
+    void testGenerateContent_validPrompt() throws IOException {
         // Arrange
         DocumentationVertexAi documentationVertexAi = new DocumentationVertexAi();
-        String testPrompt = "Test prompt for content stream generation";
+        String testPrompt = "Test prompt for content generation";
 
         GenerateContentResponse mockResponse = mock(GenerateContentResponse.class);
         Candidate mockCandidate = mock(Candidate.class);
@@ -42,55 +41,38 @@ class DocumentationVertexAiTest {
         try (MockedConstruction<VertexAI> vertexAiMock = Mockito.mockConstruction(VertexAI.class);
                 MockedConstruction<GenerativeModel> modelMock = Mockito.mockConstruction(GenerativeModel.class,
                         (mock, context) -> {
-                            ResponseStream<GenerateContentResponse> mockResponseStream = mock(ResponseStream.class);
-                            Iterator<GenerateContentResponse> mockIterator = mock(Iterator.class);
-                            when(mockIterator.hasNext()).thenReturn(true, false);
-                            when(mockIterator.next()).thenReturn(mockResponse);
-                            when(mockResponseStream.iterator()).thenReturn(mockIterator);
-                            doAnswer(invocation -> {
-                                Consumer<GenerateContentResponse> consumer = invocation.getArgument(0);
-                                consumer.accept(mockResponse);
-                                return null;
-                            }).when(mockResponseStream).forEach(any());
-                            when(mock.generateContentStream(testPrompt)).thenReturn(mockResponseStream);
+                            when(mock.generateContent(testPrompt)).thenReturn(mockResponse);
                         })) {
 
             // Act
-            AtomicBoolean callbackCalled = new AtomicBoolean(false);
-            Consumer<String> onNext = response -> {
-                assertEquals("Generated documentation text", response);
-                callbackCalled.set(true);
-            };
-
-            documentationVertexAi.generateContentStream(testPrompt, onNext);
+            GenerateContentResponse response = documentationVertexAi.generateContent(testPrompt);
+            String result = DocumentationVertexAi.extractGeneratedDocumentation(response);
 
             // Assert
-            assertTrue(callbackCalled.get(), "Callback was not called");
+            assertEquals("Generated documentation text", result);
             assertEquals(1, vertexAiMock.constructed().size());
             assertEquals(1, modelMock.constructed().size());
         }
     }
 
     @Test
-    void testGenerateContentStream_nullPrompt() {
+    void testGenerateContent_nullPrompt() {
         // Arrange
         DocumentationVertexAi documentationVertexAi = new DocumentationVertexAi();
-        Consumer<String> onNext = mock(Consumer.class);
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class,
-                () -> documentationVertexAi.generateContentStream(null, onNext));
+                () -> documentationVertexAi.generateContent(null));
     }
 
     @Test
-    void testGenerateContentStream_emptyPrompt() {
+    void testGenerateContent_emptyPrompt() {
         // Arrange
         DocumentationVertexAi documentationVertexAi = new DocumentationVertexAi();
-        Consumer<String> onNext = mock(Consumer.class);
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class,
-                () -> documentationVertexAi.generateContentStream("   ", onNext));
+                () -> documentationVertexAi.generateContent("   "));
     }
 
     @Test
