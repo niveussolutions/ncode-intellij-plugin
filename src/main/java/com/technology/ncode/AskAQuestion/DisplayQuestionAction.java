@@ -1,64 +1,64 @@
 package com.technology.ncode.AskAQuestion;
 
+import java.util.Collections;
+
+import org.jetbrains.annotations.NotNull;
+
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.SelectionModel;
-import com.intellij.openapi.wm.*;
+import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.wm.ToolWindow;
+import com.intellij.openapi.wm.ToolWindowAnchor;
+import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
-import org.jetbrains.annotations.NotNull;
 
-public class DisplayQuestionAction extends AnAction {
+public class DisplayQuestionAction extends AnAction implements DumbAware {
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        // Get the current project
         Project project = e.getProject();
         if (project == null)
             return;
 
-        // Get the editor
         Editor editor = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.EDITOR);
-        if (editor == null)
-            return;
-
-        // Get selected text
-        SelectionModel selectionModel = editor.getSelectionModel();
-        String selectedText = selectionModel.getSelectedText();
-        if (selectedText == null || selectedText.isEmpty()) {
-            return;
+        String selectedText = null;
+        if (editor != null) {
+            SelectionModel selectionModel = editor.getSelectionModel();
+            selectedText = selectionModel.getSelectedText();
         }
 
-        // Get the ToolWindowManager
         ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
-        ToolWindow toolWindow = toolWindowManager.getToolWindow("DisplayQuestionToolWindow");
+        ToolWindow toolWindow = toolWindowManager.getToolWindow("ncode-AskQuestion");
 
         if (toolWindow == null) {
-            toolWindow = toolWindowManager.registerToolWindow("DisplayQuestionToolWindow", true,
-                    ToolWindowAnchor.RIGHT);
-        } else {
-            toolWindowManager.getToolWindow("DisplayQuestionToolWindow").setAnchor(ToolWindowAnchor.RIGHT, null);
+            toolWindow = toolWindowManager.registerToolWindow("ncode-AskQuestion", true, ToolWindowAnchor.RIGHT);
         }
 
-        // Ensure content is added properly
-        if (toolWindow.getContentManager().getContentCount() == 0) {
-            DisplayQuestionToolWindowContent contentPanel = new DisplayQuestionToolWindowContent();
-            ContentFactory contentFactory = ContentFactory.getInstance();
-            Content content = contentFactory.createContent(contentPanel.getPanel(), "", false);
-            toolWindow.getContentManager().addContent(content);
-        }
+        DisplayQuestionToolWindowContent newContentPanel = new DisplayQuestionToolWindowContent();
 
-        // Update content with selected code
-        Content content = toolWindow.getContentManager().getContent(0);
-        if (content != null && content.getComponent() instanceof DisplayQuestionToolWindowContent) {
-            DisplayQuestionToolWindowContent contentPanel = (DisplayQuestionToolWindowContent) content.getComponent();
-            contentPanel.setSelectedCode(selectedText);
-        }
+        // If selection exists, send it; otherwise allow user to type manually
+        newContentPanel.setSelectedCode(selectedText);
 
-        // Activate the tool window
+        ContentFactory contentFactory = ContentFactory.getInstance();
+        Content newContent = contentFactory.createContent(newContentPanel.getPanel(), "", false);
+
+        toolWindow.getContentManager().removeAllContents(true);
+        toolWindow.getContentManager().addContent(newContent);
+
+        // Add trash icon to clear chat
+        AnAction clearChatAction = new AnAction("Clear Chat", "Clear the current chat history",
+                com.intellij.icons.AllIcons.Actions.GC) {
+            @Override
+            public void actionPerformed(@NotNull AnActionEvent event) {
+                newContentPanel.clearChatHistory();
+            }
+        };
+        toolWindow.setTitleActions(Collections.singletonList(clearChatAction));
+
         toolWindow.activate(null);
     }
-
 }
