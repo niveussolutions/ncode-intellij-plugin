@@ -19,6 +19,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -296,8 +297,12 @@ public class DisplayQuestionToolWindowContent extends JPanel {
         SwingUtilities.invokeLater(() -> {
             StyledDocument doc = chatOutputArea.getStyledDocument();
             try {
-                doc.insertString(doc.getLength(), "────────────────────────────────────────────────────────\n\n", null);
-            } catch (BadLocationException e) {
+                // Close the div we opened in appendNCodeMessageStart
+                HTMLEditorKit editorKit = (HTMLEditorKit) chatOutputArea.getEditorKit();
+                editorKit.insertHTML((HTMLDocument) doc, doc.getLength(), "</div>", 0, 0, null);
+                doc.insertString(doc.getLength(), "\n────────────────────────────────────────────────────────\n\n",
+                        null);
+            } catch (BadLocationException | IOException e) {
                 System.err.println("Error inserting separator line.");
             }
         });
@@ -356,24 +361,21 @@ public class DisplayQuestionToolWindowContent extends JPanel {
                 System.out.println("[Prompt Sent to VertexAI]");
                 System.out.println(prompt);
 
-                StringBuilder responseBuilder = new StringBuilder();
+                // Initialize the response UI once before streaming
+                SwingUtilities.invokeLater(() -> {
+                    removeWaitingMessage();
+                    appendNCodeMessageStart();
+                });
+
                 askAQuestionVertexAi.generateContentStream(prompt, chunk -> {
                     SwingUtilities.invokeLater(() -> {
-                        responseBuilder.append(chunk);
-                        removeWaitingMessage();
-                        appendNCodeMessage(responseBuilder.toString());
+                        appendNCodeMessageChunk(chunk);
                     });
                 });
 
-                String response = responseBuilder.toString();
+                String response = conversationHistory.get(conversationHistory.size() - 1).message;
                 System.out.println("[Response from VertexAI]");
                 System.out.println(response);
-
-                conversationHistory.add(new UserConversation("assistant", response));
-
-                String finalResponse = (response != null && !response.trim().isEmpty())
-                        ? response
-                        : "⚠ No response received. Please try again.";
 
                 SwingUtilities.invokeLater(() -> {
                     appendSeparatorLine();
@@ -459,24 +461,22 @@ public class DisplayQuestionToolWindowContent extends JPanel {
                 System.out.println("[Prompt Sent to VertexAI]");
                 System.out.println(prompt);
 
+                // Initialize the response UI once before streaming
+                SwingUtilities.invokeLater(() -> {
+                    removeWaitingMessage();
+                    appendNCodeMessageStart();
+                });
+
                 StringBuilder responseBuilder = new StringBuilder();
                 askAQuestionVertexAi.generateContentStream(prompt, chunk -> {
+                    responseBuilder.append(chunk);
                     SwingUtilities.invokeLater(() -> {
-                        responseBuilder.append(chunk);
-                        removeWaitingMessage();
-                        appendNCodeMessage(responseBuilder.toString());
+                        appendNCodeMessageChunk(chunk);
                     });
                 });
 
-                String response = responseBuilder.toString();
-                System.out.println("[Response from VertexAI]");
-                System.out.println(response);
-
-                conversationHistory.add(new UserConversation("assistant", response));
-
-                String finalResponse = (response != null && !response.trim().isEmpty())
-                        ? response
-                        : "⚠ No response received. Please try again.";
+                // Add the complete response to conversation history
+                conversationHistory.add(new UserConversation("assistant", responseBuilder.toString()));
 
                 SwingUtilities.invokeLater(() -> {
                     appendSeparatorLine();
@@ -535,6 +535,48 @@ public class DisplayQuestionToolWindowContent extends JPanel {
 
             chatOutputArea.setCaretPosition(doc.getLength());
         });
+    }
+
+    private void appendNCodeMessageStart() {
+        StyledDocument doc = chatOutputArea.getStyledDocument();
+        try {
+            HTMLEditorKit editorKit = (HTMLEditorKit) chatOutputArea.getEditorKit();
+            String ncodeLabel = "<div style='margin-bottom:8px;'><b><span style='font-size:16px;'>ncode:</span></b></div><div style='white-space:normal;'>";
+            editorKit.insertHTML((HTMLDocument) doc, doc.getLength(), ncodeLabel, 0, 0, null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void appendNCodeMessageChunk(String chunk) {
+        if (chunk == null || chunk.isEmpty())
+            return;
+
+        MutableDataSet options = new MutableDataSet();
+        Parser parser = Parser.builder(options).build();
+        HtmlRenderer renderer = HtmlRenderer.builder(options).build();
+        Node document = parser.parse(chunk);
+
+        try {
+            HTMLEditorKit editorKit = (HTMLEditorKit) chatOutputArea.getEditorKit();
+            HTMLDocument htmlDoc = (HTMLDocument) chatOutputArea.getDocument();
+
+            for (Node node : document.getChildren()) {
+                if (node instanceof FencedCodeBlock) {
+                    FencedCodeBlock codeBlock = (FencedCodeBlock) node;
+                    insertCodeBlock(codeBlock.getContentChars().toString());
+                } else {
+                    String htmlText = renderer.render(node);
+                    // Wrap the text in a span to ensure inline formatting
+                    String wrappedText = "<span style='white-space:normal;'>" + htmlText + "</span>";
+                    editorKit.insertHTML(htmlDoc, htmlDoc.getLength(), wrappedText, 0, 0, null);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        chatOutputArea.setCaretPosition(chatOutputArea.getDocument().getLength());
     }
 
     class CopyIcon implements Icon {
