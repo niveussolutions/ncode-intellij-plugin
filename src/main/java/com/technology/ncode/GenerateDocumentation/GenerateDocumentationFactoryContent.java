@@ -227,15 +227,11 @@ public class GenerateDocumentationFactoryContent extends JPanel {
 
             new Thread(() -> {
                 String prompt = buildPrompt(userPrompt);
-                System.out.println("\n[Prompt Sent to VertexAI]");
-                System.out.println(prompt);
 
                 DocumentationVertexAi docVertexAi = new DocumentationVertexAi();
                 try {
                     GenerateContentResponse response = docVertexAi.generateContent(prompt);
                     String documentation = DocumentationVertexAi.extractGeneratedDocumentation(response);
-                    System.out.println("[Response from VertexAI]");
-                    System.out.println(documentation);
 
                     String markdownResponse = renderMarkdown(documentation);
 
@@ -259,9 +255,6 @@ public class GenerateDocumentationFactoryContent extends JPanel {
             // input
             enableInput();
         }
-
-        System.out.println("[Selected Code]");
-        System.out.println(code);
     }
 
     private void sendUserQuery() {
@@ -279,19 +272,12 @@ public class GenerateDocumentationFactoryContent extends JPanel {
         conversationHistory.add(new UserConversation("user", userQuery));
 
         new Thread(() -> {
-            System.out.println("[User Query]");
-            System.out.println(userQuery);
-
             String prompt = buildPrompt(userQuery);
-            System.out.println("[Prompt Sent to VertexAI]");
-            System.out.println(prompt);
 
             DocumentationVertexAi docVertexAi = new DocumentationVertexAi();
             try {
                 GenerateContentResponse response = docVertexAi.generateContent(prompt);
                 String documentation = DocumentationVertexAi.extractGeneratedDocumentation(response);
-                System.out.println("[Response from VertexAI]");
-                System.out.println(documentation);
 
                 // Store assistant response in history
                 conversationHistory.add(new UserConversation("assistant", documentation));

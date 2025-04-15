@@ -328,8 +328,6 @@ public class DisplayQuestionToolWindowContent extends JPanel {
         SwingUtilities.invokeLater(() -> {
             lastSelectedCode = (code != null) ? code : "";
             chatOutputArea.setText("");
-            System.out.println("[Selected Code]");
-            System.out.println(lastSelectedCode.isEmpty() ? "No code selected." : lastSelectedCode);
             if (!lastSelectedCode.isEmpty()) {
                 sendMessageToAPI("Explain?");
             }
@@ -355,12 +353,8 @@ public class DisplayQuestionToolWindowContent extends JPanel {
 
         executorService.execute(() -> {
             try {
-                System.out.println("[User Query]");
-                System.out.println(message);
                 conversationHistory.add(new UserConversation("user", message));
                 String prompt = buildPrompt();
-                System.out.println("[Prompt Sent to VertexAI]");
-                System.out.println(prompt);
 
                 // Initialize the response UI once before streaming
                 SwingUtilities.invokeLater(() -> {
@@ -375,10 +369,6 @@ public class DisplayQuestionToolWindowContent extends JPanel {
                         appendNCodeMessageChunk(responseText);
                     });
                 }
-
-                String conversationResponse = conversationHistory.get(conversationHistory.size() - 1).message;
-                System.out.println("[Response from VertexAI]");
-                System.out.println(conversationResponse);
 
                 SwingUtilities.invokeLater(() -> {
                     appendSeparatorLine();
@@ -456,13 +446,9 @@ public class DisplayQuestionToolWindowContent extends JPanel {
 
         executorService.execute(() -> {
             try {
-                System.out.println("[User Query]");
-                System.out.println(questionText);
                 conversationHistory.add(new UserConversation("user", questionText));
 
                 String prompt = buildPrompt();
-                System.out.println("[Prompt Sent to VertexAI]");
-                System.out.println(prompt);
 
                 // Initialize the response UI once before streaming
                 SwingUtilities.invokeLater(() -> {

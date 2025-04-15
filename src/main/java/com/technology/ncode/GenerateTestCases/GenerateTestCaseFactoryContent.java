@@ -267,17 +267,9 @@ public class GenerateTestCaseFactoryContent extends JPanel {
             new Thread(() -> {
                 String prompt = buildFullPrompt(userPrompt);
 
-                System.out.println("[User Query]");
-                System.out.println(userPrompt);
-                System.out.println("[Prompt Sent to VertexAI]");
-                System.out.println(prompt);
-
                 try {
                     TestCaseCodeVertexAi vertexAi = new TestCaseCodeVertexAi();
                     String testCase = vertexAi.generateContent(prompt);
-
-                    System.out.println("[Response from VertexAI]");
-                    System.out.println(testCase);
 
                     // ✅ Store AI response
                     conversationHistory.add(new UserConversation("assistant", testCase));
@@ -301,9 +293,6 @@ public class GenerateTestCaseFactoryContent extends JPanel {
             // If no code is selected, just inform and allow manual input
             enableInput();
         }
-
-        System.out.println("[Selected Code]");
-        System.out.println(code);
     }
 
     private void sendUserQuery() {
@@ -321,19 +310,11 @@ public class GenerateTestCaseFactoryContent extends JPanel {
         conversationHistory.add(new UserConversation("user", userQuery));
 
         new Thread(() -> {
-            System.out.println("[User Query]");
-            System.out.println(userQuery);
-
             String prompt = buildFullPrompt(userQuery);
-            System.out.println("[Prompt Sent to VertexAI]");
-            System.out.println(prompt);
 
             try {
                 TestCaseCodeVertexAi vertexAi = new TestCaseCodeVertexAi();
                 String response = vertexAi.generateContent(prompt);
-
-                System.out.println("[Response from VertexAI]");
-                System.out.println(response);
 
                 // ✅ Store assistant response
                 conversationHistory.add(new UserConversation("assistant", response));
