@@ -1,5 +1,9 @@
 package com.technology.ncode.VertexAI;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.function.Consumer;
+
 import com.google.cloud.vertexai.VertexAI;
 import com.google.cloud.vertexai.api.Candidate;
 import com.google.cloud.vertexai.api.Content;
@@ -8,9 +12,6 @@ import com.google.cloud.vertexai.api.GenerationConfig;
 import com.google.cloud.vertexai.api.Part;
 import com.google.cloud.vertexai.generativeai.ContentMaker;
 import com.google.cloud.vertexai.generativeai.GenerativeModel;
-import java.io.IOException;
-import java.util.List;
-import java.util.function.Consumer;
 
 public class TestCaseCodeVertexAi {
     private static final String PROJECT_ID = "niveus-ncode";
@@ -74,6 +75,36 @@ public class TestCaseCodeVertexAi {
                             onNext.accept(text);
                         }
                     });
+        }
+    }
+
+    public String generateContent(String prompt) throws IOException {
+        if (prompt == null) {
+            throw new IllegalArgumentException("Prompt cannot be null");
+        }
+
+        if (prompt.trim().isEmpty()) {
+            throw new IOException("Prompt cannot be empty or contain only whitespace");
+        }
+
+        try (VertexAI vertexAi = new VertexAI(PROJECT_ID, LOCATION)) {
+            GenerationConfig generationConfig = GenerationConfig.newBuilder()
+                    .setTemperature(0.3f)
+                    .setMaxOutputTokens(1024)
+                    .setTopP(1.0f)
+                    .setTopK(40)
+                    .build();
+
+            GenerativeModel model = new GenerativeModel.Builder()
+                    .setModelName("gemini-2.0-flash")
+                    .setVertexAi(vertexAi)
+                    .setGenerationConfig(generationConfig)
+                    .setSystemInstruction(
+                            ContentMaker.fromString(SYSTEM_PROMPT))
+                    .build();
+
+            GenerateContentResponse response = model.generateContent(prompt);
+            return extractTestCaseCode(response);
         }
     }
 

@@ -1,53 +1,71 @@
 package com.technology.ncode.GenerateTestCases;
 
+import java.util.Collections;
+
+import org.jetbrains.annotations.NotNull;
+
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.SelectionModel;
+import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowAnchor;
 import com.intellij.openapi.wm.ToolWindowManager;
-import org.jetbrains.annotations.NotNull;
+import com.intellij.ui.content.Content;
+import com.intellij.ui.content.ContentFactory;
 
-public class GenerateTestCase extends AnAction {
+public class GenerateTestCase extends AnAction implements DumbAware {
+
+    // Reuse this to keep content and history in the same tool window
+    private static GenerateTestCaseFactoryContent content;
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        // Get the current project
         Project project = e.getProject();
         if (project == null)
             return;
 
-        // Get the editor
         Editor editor = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.EDITOR);
-        if (editor == null)
-            return;
+        String selectedText = "";
 
-        // Get selected text
-        SelectionModel selectionModel = editor.getSelectionModel();
-        String selectedText = selectionModel.getSelectedText();
-
-        if (selectedText == null || selectedText.isEmpty()) {
-            return;
+        if (editor != null) {
+            SelectionModel selectionModel = editor.getSelectionModel();
+            if (selectionModel.hasSelection()) {
+                selectedText = selectionModel.getSelectedText();
+            }
         }
 
-        // Open or create the tool window
         ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
-        ToolWindow toolWindow = toolWindowManager.getToolWindow("GenerateTestCaseToolWindow");
+        ToolWindow toolWindow = toolWindowManager.getToolWindow("ncode-TestCaseGeneration");
 
         if (toolWindow == null) {
-            toolWindow = toolWindowManager.registerToolWindow("GenerateTestCaseToolWindow", true,
-                    ToolWindowAnchor.RIGHT);
+            toolWindow = toolWindowManager.registerToolWindow("ncode-TestCaseGeneration", true, ToolWindowAnchor.RIGHT);
         }
 
-        // Pass the selected text to the panel
-        GenerateTestCaseFactoryContent content = new GenerateTestCaseFactoryContent();
-        content.setSelectedCode(selectedText);
+        // First-time setup
+        if (content == null) {
+            content = new GenerateTestCaseFactoryContent();
+            ContentFactory contentFactory = ContentFactory.getInstance();
+            Content toolWindowContent = contentFactory.createContent(content.getPanel(), "", false);
+            toolWindow.getContentManager().addContent(toolWindowContent);
 
-        // Set the content of the tool window
-        toolWindow.getComponent().removeAll();
-        toolWindow.getComponent().add(content.getPanel());
+            // Set up "Clear Chat" button
+            AnAction clearChatAction = new AnAction("Clear Chat", "Clear the current chat history",
+                    com.intellij.icons.AllIcons.Actions.GC) {
+                @Override
+                public void actionPerformed(@NotNull AnActionEvent event) {
+                    content.clearChatHistory();
+                }
+            };
+            toolWindow.setTitleActions(Collections.singletonList(clearChatAction));
+        }
+
+        // Always update selected code
+        content.setSelectedCode(selectedText != null ? selectedText : "");
+
+        // Bring focus to the tool window
         toolWindow.activate(null);
     }
 }
