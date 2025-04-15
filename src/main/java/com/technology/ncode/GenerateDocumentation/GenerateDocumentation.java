@@ -4,57 +4,65 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.SelectionModel;
+import com.intellij.openapi.project.DumbAware;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowAnchor;
 import com.intellij.openapi.wm.ToolWindowManager;
-import com.intellij.openapi.project.Project;
+import com.intellij.ui.content.Content;
+import com.intellij.ui.content.ContentFactory;
 import org.jetbrains.annotations.NotNull;
 
-public class GenerateDocumentation extends AnAction {
+import java.util.Collections;
+
+public class GenerateDocumentation extends AnAction implements DumbAware {
+
+    // Persist content instance to reuse panel and preserve chat history
+    private static GenerateDocumentationFactoryContent content;
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        // Get the current project
         Project project = e.getProject();
-        if (project == null) {
+        if (project == null)
             return;
-        }
 
-        // Get the editor
         Editor editor = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.EDITOR);
-        if (editor == null) {
-            return;
+        String selectedText = "";
+        if (editor != null) {
+            SelectionModel selectionModel = editor.getSelectionModel();
+            if (selectionModel.hasSelection()) {
+                selectedText = selectionModel.getSelectedText();
+            }
         }
 
-        // Get selected text
-        SelectionModel selectionModel = editor.getSelectionModel();
-        String selectedText = (selectionModel != null) ? selectionModel.getSelectedText() : null;
-
-        // Ensure selectedText is not null or empty
-        if (selectedText == null || selectedText.trim().isEmpty()) {
-            return;
-        }
-
-        // Get or create the tool window
-        ToolWindow toolWindow = ToolWindowManager.getInstance(project).getToolWindow("GenerateDocumentationToolWindow");
+        ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
+        ToolWindow toolWindow = toolWindowManager.getToolWindow("ncode-DocumentGeneration");
 
         if (toolWindow == null) {
-            toolWindow = ToolWindowManager.getInstance(project).registerToolWindow("GenerateDocumentationToolWindow",
-                    true, ToolWindowAnchor.RIGHT);
+            toolWindow = toolWindowManager.registerToolWindow("ncode-DocumentGeneration", true, ToolWindowAnchor.RIGHT);
         }
 
-        // Ensure the tool window component is initialized
-        if (toolWindow.getComponent() == null) {
-            return; // Exit if the tool window component is not available
+        if (content == null) {
+            content = new GenerateDocumentationFactoryContent();
+            ContentFactory contentFactory = ContentFactory.getInstance();
+            Content toolWindowContent = contentFactory.createContent(content.getPanel(), "", false);
+            toolWindow.getContentManager().addContent(toolWindowContent);
+
+            // Add Clear Chat button
+            AnAction clearChatAction = new AnAction("Clear Chat", "Clear the current chat history",
+                    com.intellij.icons.AllIcons.Actions.GC) {
+                @Override
+                public void actionPerformed(@NotNull AnActionEvent event) {
+                    content.clearChatHistory();
+                }
+            };
+            toolWindow.setTitleActions(Collections.singletonList(clearChatAction));
         }
 
-        // Pass the selected text to the tool window content
-        GenerateDocumentationFactoryContent content = new GenerateDocumentationFactoryContent();
-        content.setSelectedCode(selectedText);
+        // Dynamically update the selected code in the same window
+        content.setSelectedCode(selectedText != null ? selectedText : "");
 
-        // Update the tool window with new content
-        toolWindow.getComponent().removeAll();
-        toolWindow.getComponent().add(content.getPanel());
+        // Activate and bring to front
         toolWindow.activate(null);
     }
 }

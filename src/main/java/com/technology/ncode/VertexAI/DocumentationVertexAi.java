@@ -1,5 +1,8 @@
 package com.technology.ncode.VertexAI;
 
+import java.io.IOException;
+import java.util.List;
+
 import com.google.cloud.vertexai.VertexAI;
 import com.google.cloud.vertexai.api.Candidate;
 import com.google.cloud.vertexai.api.Content;
@@ -8,9 +11,6 @@ import com.google.cloud.vertexai.api.GenerationConfig;
 import com.google.cloud.vertexai.api.Part;
 import com.google.cloud.vertexai.generativeai.ContentMaker;
 import com.google.cloud.vertexai.generativeai.GenerativeModel;
-import java.io.IOException;
-import java.util.List;
-import java.util.function.Consumer;
 
 public class DocumentationVertexAi {
     private static final String PROJECT_ID = "niveus-ncode";
@@ -37,7 +37,7 @@ public class DocumentationVertexAi {
             11. Do not generate code, only markdown documentation.
             """;
 
-    public void generateContentStream(String prompt, Consumer<String> onNext) throws IOException {
+    public GenerateContentResponse generateContent(String prompt) throws IOException {
         if (prompt == null || prompt.trim().isEmpty()) {
             throw new IllegalArgumentException("Prompt cannot be null or empty");
         }
@@ -45,7 +45,7 @@ public class DocumentationVertexAi {
         try (VertexAI vertexAi = new VertexAI(PROJECT_ID, LOCATION)) {
             GenerationConfig generationConfig = GenerationConfig.newBuilder()
                     .setTemperature(0.3f)
-                    .setMaxOutputTokens(1024) // Increased max tokens for documentation
+                    .setMaxOutputTokens(1024)
                     .setTopP(1.0f)
                     .setTopK(40)
                     .build();
@@ -54,17 +54,10 @@ public class DocumentationVertexAi {
                     .setModelName("gemini-2.0-flash")
                     .setVertexAi(vertexAi)
                     .setGenerationConfig(generationConfig)
-                    .setSystemInstruction(
-                            ContentMaker.fromString(SYSTEM_PROMPT))
+                    .setSystemInstruction(ContentMaker.fromString(SYSTEM_PROMPT))
                     .build();
 
-            model.generateContentStream(prompt)
-                    .forEach(response -> {
-                        String text = extractGeneratedDocumentation(response);
-                        if (text != null && !text.isEmpty()) {
-                            onNext.accept(text);
-                        }
-                    });
+            return model.generateContent(prompt);
         }
     }
 
@@ -92,10 +85,6 @@ public class DocumentationVertexAi {
             }
         }
 
-        if (sb.length() == 0) {
-            return null;
-        }
-
-        return sb.toString();
+        return sb.length() > 0 ? sb.toString() : null;
     }
 }
