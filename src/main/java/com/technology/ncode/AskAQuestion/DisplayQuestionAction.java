@@ -18,6 +18,8 @@ import com.intellij.ui.content.ContentFactory;
 
 public class DisplayQuestionAction extends AnAction implements DumbAware {
 
+    private static DisplayQuestionToolWindowContent toolWindowContent;
+
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
@@ -32,32 +34,34 @@ public class DisplayQuestionAction extends AnAction implements DumbAware {
         }
 
         ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
-        ToolWindow toolWindow = toolWindowManager.getToolWindow("ncode-AskQuestion");
+        ToolWindow toolWindow = toolWindowManager.getToolWindow("ncode - Chat");
 
         if (toolWindow == null) {
-            toolWindow = toolWindowManager.registerToolWindow("ncode-AskQuestion", true, ToolWindowAnchor.RIGHT);
+            toolWindow = toolWindowManager.registerToolWindow("ncode - Chat", true, ToolWindowAnchor.RIGHT);
         }
 
-        DisplayQuestionToolWindowContent newContentPanel = new DisplayQuestionToolWindowContent();
-
-        // If selection exists, send it; otherwise allow user to type manually
-        newContentPanel.setSelectedCode(selectedText);
-
         ContentFactory contentFactory = ContentFactory.getInstance();
-        Content newContent = contentFactory.createContent(newContentPanel.getPanel(), "", false);
 
-        toolWindow.getContentManager().removeAllContents(true);
-        toolWindow.getContentManager().addContent(newContent);
+        if (toolWindowContent == null) {
+            toolWindowContent = new DisplayQuestionToolWindowContent();
+            Content content = contentFactory.createContent(toolWindowContent.getPanel(), "", false);
+            toolWindow.getContentManager().removeAllContents(true);
+            toolWindow.getContentManager().addContent(content);
 
-        // Add trash icon to clear chat
-        AnAction clearChatAction = new AnAction("Clear Chat", "Clear the current chat history",
-                com.intellij.icons.AllIcons.Actions.GC) {
-            @Override
-            public void actionPerformed(@NotNull AnActionEvent event) {
-                newContentPanel.clearChatHistory();
-            }
-        };
-        toolWindow.setTitleActions(Collections.singletonList(clearChatAction));
+            AnAction clearChatAction = new AnAction("Clear Chat", "Clear the current chat history",
+                    com.intellij.icons.AllIcons.Actions.GC) {
+                @Override
+                public void actionPerformed(@NotNull AnActionEvent event) {
+                    toolWindowContent.clearChatHistory();
+                }
+            };
+            toolWindow.setTitleActions(Collections.singletonList(clearChatAction));
+        }
+
+        // Append new selection to previous
+        if (selectedText != null && !selectedText.isEmpty()) {
+            toolWindowContent.setSelectedCode(selectedText);
+        }
 
         toolWindow.activate(null);
     }
