@@ -1,7 +1,4 @@
-package com.technology.ncode.InlineCodeCompletion;
-
-import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.project.Project;
+package com.technology.ncode;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,6 +9,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+
+import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.project.Project;
 
 /**
  * Handles reporting usage metrics to the backend server.
@@ -107,6 +107,9 @@ public class UsageMetricsReporter {
                 EXTENSION_TYPE,
                 linesOfCodeSuggested,
                 linesOfCodeAccepted);
+
+        System.out.println("Sending metrics to: " + API_URL);
+        System.out.println("Payload: " + jsonPayload);
 
         // Create the HTTP request
         HttpRequest request = HttpRequest.newBuilder()
