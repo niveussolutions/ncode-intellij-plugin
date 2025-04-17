@@ -1,5 +1,9 @@
 package com.technology.ncode.GenerateDocumentation;
 
+import java.util.Collections;
+
+import org.jetbrains.annotations.NotNull;
+
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.editor.Editor;
@@ -11,9 +15,6 @@ import com.intellij.openapi.wm.ToolWindowAnchor;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
-import org.jetbrains.annotations.NotNull;
-
-import java.util.Collections;
 
 public class GenerateDocumentation extends AnAction implements DumbAware {
 
@@ -43,7 +44,7 @@ public class GenerateDocumentation extends AnAction implements DumbAware {
         }
 
         if (content == null) {
-            content = new GenerateDocumentationFactoryContent();
+            content = new GenerateDocumentationFactoryContent(project);
             ContentFactory contentFactory = ContentFactory.getInstance();
             Content toolWindowContent = contentFactory.createContent(content.getPanel(), "", false);
             toolWindow.getContentManager().addContent(toolWindowContent);
