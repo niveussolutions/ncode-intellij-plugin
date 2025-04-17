@@ -48,6 +48,8 @@ import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
+import com.intellij.openapi.project.Project;
+import com.technology.ncode.UsageMetricsReporter;
 import com.technology.ncode.VertexAI.TestCaseCodeVertexAi;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
@@ -61,8 +63,10 @@ public class GenerateTestCaseFactoryContent extends JPanel {
     private String lastSelectedCode = "";
     private static final String PLACEHOLDER_TEXT = "Ask NCode...";
     private List<UserConversation> conversationHistory = new ArrayList<>();
+    private final Project project;
 
-    public GenerateTestCaseFactoryContent() {
+    public GenerateTestCaseFactoryContent(Project project) {
+        this.project = project;
         setLayout(new BorderLayout());
         setBackground(Color.BLACK);
 
@@ -271,6 +275,15 @@ public class GenerateTestCaseFactoryContent extends JPanel {
                     TestCaseCodeVertexAi vertexAi = new TestCaseCodeVertexAi();
                     String testCase = vertexAi.generateContent(prompt);
 
+                    // Report metrics for test case generation
+                    UsageMetricsReporter.reportMetricsAsync(
+                            UsageMetricsReporter.getUserInfo().email,
+                            UsageMetricsReporter.getUserInfo().projectId,
+                            0, // linesOfCodeSuggested
+                            0, // linesOfCodeAccepted
+                            project, // Pass the project reference
+                            "testcase");
+
                     // ✅ Store AI response
                     conversationHistory.add(new UserConversation("assistant", testCase));
 
@@ -315,6 +328,15 @@ public class GenerateTestCaseFactoryContent extends JPanel {
             try {
                 TestCaseCodeVertexAi vertexAi = new TestCaseCodeVertexAi();
                 String response = vertexAi.generateContent(prompt);
+
+                // Report metrics for test case generation
+                UsageMetricsReporter.reportMetricsAsync(
+                        UsageMetricsReporter.getUserInfo().email,
+                        UsageMetricsReporter.getUserInfo().projectId,
+                        0, // linesOfCodeSuggested
+                        0, // linesOfCodeAccepted
+                        project, // Pass the project reference
+                        "testcase");
 
                 // ✅ Store assistant response
                 conversationHistory.add(new UserConversation("assistant", response));

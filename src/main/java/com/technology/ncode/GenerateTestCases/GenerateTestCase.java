@@ -46,7 +46,7 @@ public class GenerateTestCase extends AnAction implements DumbAware {
 
         // First-time setup
         if (content == null) {
-            content = new GenerateTestCaseFactoryContent();
+            content = new GenerateTestCaseFactoryContent(project);
             ContentFactory contentFactory = ContentFactory.getInstance();
             Content toolWindowContent = contentFactory.createContent(content.getPanel(), "", false);
             toolWindow.getContentManager().addContent(toolWindowContent);
