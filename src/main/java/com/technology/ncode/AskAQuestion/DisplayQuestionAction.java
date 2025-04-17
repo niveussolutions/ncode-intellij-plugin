@@ -43,7 +43,7 @@ public class DisplayQuestionAction extends AnAction implements DumbAware {
         ContentFactory contentFactory = ContentFactory.getInstance();
 
         if (toolWindowContent == null) {
-            toolWindowContent = new DisplayQuestionToolWindowContent();
+            toolWindowContent = new DisplayQuestionToolWindowContent(editor, project);
             Content content = contentFactory.createContent(toolWindowContent.getPanel(), "", false);
             toolWindow.getContentManager().removeAllContents(true);
             toolWindow.getContentManager().addContent(content);

@@ -50,6 +50,9 @@ import javax.swing.text.StyledDocument;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 
+import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.project.Project;
+import com.technology.ncode.UsageMetricsReporter;
 import com.technology.ncode.VertexAI.AskAQuestionVertexAi;
 import com.vladsch.flexmark.ast.BulletList;
 import com.vladsch.flexmark.ast.FencedCodeBlock;
@@ -71,8 +74,12 @@ public class DisplayQuestionToolWindowContent extends JPanel {
     private final List<UserConversation> conversationHistory = new ArrayList<>();
     private JPanel chatPanel; // Wraps the chat output area
     private JScrollPane scrollPane;
+    private Editor editor;
+    private Project project;
 
-    public DisplayQuestionToolWindowContent() {
+    public DisplayQuestionToolWindowContent(Editor editor, Project project) {
+        this.editor = editor;
+        this.project = project;
         setLayout(new BorderLayout());
         setBackground(new Color(25, 25, 25));
         executorService = Executors.newSingleThreadExecutor();
@@ -390,6 +397,19 @@ public class DisplayQuestionToolWindowContent extends JPanel {
 
         boolean isAutoExplain = message.equals("Explain?");
 
+        // Report metrics for the question
+        if (editor != null) {
+            UsageMetricsReporter.reportExplanationMetrics(editor);
+        } else {
+            UsageMetricsReporter.reportMetricsAsync(
+                    UsageMetricsReporter.getUserInfo().email,
+                    UsageMetricsReporter.getUserInfo().projectId,
+                    0, // linesOfCodeSuggested
+                    0, // linesOfCodeAccepted
+                    project,
+                    "explanation");
+        }
+
         executorService.execute(() -> {
             try {
                 System.out.println("[User Query]");
@@ -534,6 +554,19 @@ public class DisplayQuestionToolWindowContent extends JPanel {
         sendButton.setEnabled(false);
         sendButton.setForeground(Color.GRAY);
         askQuestionField.setEnabled(false);
+
+        // Report metrics for the question
+        if (editor != null) {
+            UsageMetricsReporter.reportExplanationMetrics(editor);
+        } else {
+            UsageMetricsReporter.reportMetricsAsync(
+                    UsageMetricsReporter.getUserInfo().email,
+                    UsageMetricsReporter.getUserInfo().projectId,
+                    0, // linesOfCodeSuggested
+                    0, // linesOfCodeAccepted
+                    project,
+                    "explanation");
+        }
 
         executorService.execute(() -> {
             try {

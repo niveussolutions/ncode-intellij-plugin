@@ -71,7 +71,29 @@ public class UsageMetricsReporter {
                 userInfo.projectId,
                 linesOfCodeSuggested,
                 linesOfCodeAccepted,
-                editor.getProject());
+                editor.getProject(),
+                "completion");
+    }
+
+    /**
+     * Reports explanation metrics asynchronously to the backend service.
+     * 
+     * @param editor The current editor instance
+     * @return CompletableFuture representing the asynchronous operation
+     */
+    public static CompletableFuture<Void> reportExplanationMetrics(
+            com.intellij.openapi.editor.Editor editor) {
+        // Get user information
+        MetricsUserInfo userInfo = getUserInfo();
+
+        // Report metrics asynchronously
+        return reportMetricsAsync(
+                userInfo.email,
+                userInfo.projectId,
+                0, // linesOfCodeSuggested
+                0, // linesOfCodeAccepted
+                editor.getProject(),
+                "explanation");
     }
 
     /**
@@ -82,6 +104,7 @@ public class UsageMetricsReporter {
      * @param linesOfCodeSuggested Number of lines suggested
      * @param linesOfCodeAccepted  Number of lines accepted
      * @param project              Current project (for displaying notifications)
+     * @param requestType          Type of request (completion or explanation)
      * @return CompletableFuture representing the asynchronous operation
      */
     public static CompletableFuture<Void> reportMetricsAsync(
@@ -89,7 +112,8 @@ public class UsageMetricsReporter {
             String projectId,
             int linesOfCodeSuggested,
             int linesOfCodeAccepted,
-            Project project) {
+            Project project,
+            String requestType) {
 
         // Use "niveus-ncode" as default value if email is empty
         String emailToUse = (email == null || email.isEmpty()) ? "niveus-ncode" : email;
@@ -99,11 +123,12 @@ public class UsageMetricsReporter {
         // Create the JSON payload
         String jsonPayload = String.format(
                 "{\"secretKey\":\"%s\",\"email\":\"%s\",\"projectId\":\"%s\"," +
-                        "\"requestType\":\"completion\",\"extensionType\":\"%s\"," +
+                        "\"requestType\":\"%s\",\"extensionType\":\"%s\"," +
                         "\"linesOfCodeSuggested\":%d,\"linesOfCodeAccepted\":%d}",
                 USAGE_METRICS_SECRET_KEY,
                 emailToUse,
                 projectIdToUse,
+                requestType,
                 EXTENSION_TYPE,
                 linesOfCodeSuggested,
                 linesOfCodeAccepted);
@@ -123,6 +148,7 @@ public class UsageMetricsReporter {
         return httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding())
                 .thenAccept(response -> {
                     int statusCode = response.statusCode();
+                    System.out.println("Metrics API returned status code: " + statusCode);
                     if (statusCode < 200 || statusCode >= 300) {
                         LOG.warn("Metrics API returned status code: " + statusCode);
                     }
