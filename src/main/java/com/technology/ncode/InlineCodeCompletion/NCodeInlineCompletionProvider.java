@@ -45,6 +45,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiFile;
 import com.intellij.util.concurrency.AppExecutorUtil;
+import com.technology.ncode.UsageMetricsReporter;
 import com.technology.ncode.VertexAI.InlineVertexAi;
 
 /**

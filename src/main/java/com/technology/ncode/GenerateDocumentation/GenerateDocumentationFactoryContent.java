@@ -46,6 +46,8 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.StyledDocument;
 
 import com.google.cloud.vertexai.api.GenerateContentResponse;
+import com.intellij.openapi.project.Project;
+import com.technology.ncode.UsageMetricsReporter;
 import com.technology.ncode.VertexAI.DocumentationVertexAi;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
@@ -60,8 +62,10 @@ public class GenerateDocumentationFactoryContent extends JPanel {
     private static final String PLACEHOLDER_TEXT = "Ask NCode...";
     private List<UserConversation> conversationHistory = new ArrayList<>();
     private JPanel chatPanel;
+    private final Project project;
 
-    public GenerateDocumentationFactoryContent() {
+    public GenerateDocumentationFactoryContent(Project project) {
+        this.project = project;
         setLayout(new BorderLayout());
         setBackground(Color.BLACK);
 
@@ -233,6 +237,15 @@ public class GenerateDocumentationFactoryContent extends JPanel {
                     GenerateContentResponse response = docVertexAi.generateContent(prompt);
                     String documentation = DocumentationVertexAi.extractGeneratedDocumentation(response);
 
+                    // Report metrics for documentation generation
+                    UsageMetricsReporter.reportMetricsAsync(
+                            UsageMetricsReporter.getUserInfo().email,
+                            UsageMetricsReporter.getUserInfo().projectId,
+                            0, // linesOfCodeSuggested
+                            0, // linesOfCodeAccepted
+                            project, // Pass the project reference
+                            "documentation");
+
                     String markdownResponse = renderMarkdown(documentation);
 
                     SwingUtilities.invokeLater(() -> {
@@ -278,6 +291,15 @@ public class GenerateDocumentationFactoryContent extends JPanel {
             try {
                 GenerateContentResponse response = docVertexAi.generateContent(prompt);
                 String documentation = DocumentationVertexAi.extractGeneratedDocumentation(response);
+
+                // Report metrics for documentation generation
+                UsageMetricsReporter.reportMetricsAsync(
+                        UsageMetricsReporter.getUserInfo().email,
+                        UsageMetricsReporter.getUserInfo().projectId,
+                        0, // linesOfCodeSuggested
+                        0, // linesOfCodeAccepted
+                        project, // Pass the project reference
+                        "documentation");
 
                 // Store assistant response in history
                 conversationHistory.add(new UserConversation("assistant", documentation));

@@ -12,7 +12,7 @@ public class DisplayQuestionToolWindowFactory implements ToolWindowFactory {
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
-        DisplayQuestionToolWindowContent content = new DisplayQuestionToolWindowContent();
+        DisplayQuestionToolWindowContent content = new DisplayQuestionToolWindowContent(null, project);
         // Add content to the tool window
         ContentFactory contentFactory = ContentFactory.getInstance();
         Content toolWindowContent = contentFactory.createContent(content.getPanel(), "", false);

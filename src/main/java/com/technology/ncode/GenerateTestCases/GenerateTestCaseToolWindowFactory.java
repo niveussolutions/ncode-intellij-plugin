@@ -12,7 +12,7 @@ public class GenerateTestCaseToolWindowFactory implements ToolWindowFactory {
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
-        GenerateTestCaseFactoryContent content = new GenerateTestCaseFactoryContent();
+        GenerateTestCaseFactoryContent content = new GenerateTestCaseFactoryContent(project);
 
         ContentFactory contentFactory = ContentFactory.getInstance();
         Content toolWindowContent = contentFactory.createContent(content.getPanel(), "", false);
