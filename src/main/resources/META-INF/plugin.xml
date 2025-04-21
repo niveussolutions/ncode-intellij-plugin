@@ -25,6 +25,12 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
 
+    <idea-version since-build="231.0" until-build="251.*" />
+    <compatibility>
+        <product name="IntelliJ IDEA Community" min="2023.1" max="2025.1" />
+        <product name="IntelliJ IDEA Ultimate" min="2023.1" max="2025.1" />
+    </compatibility>
+
     <actions>
         <!-- Define a new group named "ncode" -->
         <group id="com.technology.ncodeGroup"
