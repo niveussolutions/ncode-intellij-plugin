@@ -59,7 +59,6 @@ intellij {
 }
 
 tasks {
-    // Set the JVM compatibility versions
     withType<JavaCompile> {
         sourceCompatibility = "17"
         targetCompatibility = "17"
@@ -69,7 +68,7 @@ tasks {
     }
 
     patchPluginXml {
-        sinceBuild.set("231.0")
+        sinceBuild.set("241.0")
         untilBuild.set("251.*")
     }
 
