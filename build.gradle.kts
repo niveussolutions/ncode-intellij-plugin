@@ -29,7 +29,7 @@ sonarqube {
 }
 
 group = "com.technology"
-version = "4.0-SNAPSHOT"
+version = "5.0-SNAPSHOT"
 
 repositories {
     mavenCentral()

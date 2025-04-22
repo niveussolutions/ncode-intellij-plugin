@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.technology.ncode</id>
     <name>NCode</name>
-    <version>4.0.0</version>
+    <version>5.0.0</version>
     <vendor email="innovation@niveussolutions.com" url="https://niveussolutions.com">
         Niveus Solutions
     </vendor>
