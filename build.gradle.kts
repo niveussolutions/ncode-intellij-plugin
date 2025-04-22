@@ -29,7 +29,7 @@ sonarqube {
 }
 
 group = "com.technology"
-version = "3.0-SNAPSHOT"
+version = "5.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -59,7 +59,6 @@ intellij {
 }
 
 tasks {
-    // Set the JVM compatibility versions
     withType<JavaCompile> {
         sourceCompatibility = "17"
         targetCompatibility = "17"
@@ -69,8 +68,8 @@ tasks {
     }
 
     patchPluginXml {
-        sinceBuild.set("241")
-        untilBuild.set("243.*")
+        sinceBuild.set("241.0")
+        untilBuild.set("251.*")
     }
 
     signPlugin {

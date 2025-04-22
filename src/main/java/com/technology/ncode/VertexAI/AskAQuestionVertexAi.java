@@ -16,20 +16,6 @@ public class AskAQuestionVertexAi {
     private static final String PROJECT_ID = "niveus-ncode";
     private static final String LOCATION = "us-central1";
 
-    private static final String SYSTEM_PROMPT = """
-            You are an expert coding assistant designed to provide concise and accurate code completions.
-
-            Instructions:
-            1. Analyze the surrounding code to understand the context and the user's intent.
-            2. Only generate the code that is missing at the current cursor position, marked by "{caret is here}".
-            3. Do not generate any code that already exists.
-            4. If no code is needed at the cursor position, return an empty string.
-            5. Follow the existing code style, including indentation, spacing, and naming conventions.
-            6. Return only the code snippet, without any additional explanations or comments, unless the prompt is a comment requiring function generation.
-            7. Ensure the generated code is syntactically correct and logically sound.
-            8. If a user instruction is provided as a comment, then create the corresponding function.
-            """;
-
     public GenerateContentResponse generateContent(String prompt) throws IOException {
         if (prompt == null || prompt.trim().isEmpty()) {
             throw new IllegalArgumentException("Prompt cannot be null or empty");
@@ -47,8 +33,6 @@ public class AskAQuestionVertexAi {
                     .setModelName("gemini-2.0-flash")
                     .setVertexAi(vertexAi)
                     .setGenerationConfig(generationConfig)
-                    .setSystemInstruction(
-                            ContentMaker.fromString(SYSTEM_PROMPT))
                     .build();
 
             return model.generateContent(prompt);

@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.technology.ncode</id>
     <name>NCode</name>
-    <version>3.0.0</version>
+    <version>5.0.0</version>
     <vendor email="innovation@niveussolutions.com" url="https://niveussolutions.com">
         Niveus Solutions
     </vendor>
@@ -35,14 +35,6 @@
             <!-- Attach this group to the Editor Popup Menu -->
             <add-to-group group-id="EditorPopupMenu" anchor="first" />
         </group>
-
-        <!-- Google This -->
-        <action id="com.technology.ncode.GoogleThis.GoogleThis"
-            class="com.technology.ncode.GoogleThis.GoogleThis"
-            text="Google this please!">
-            <add-to-group group-id="com.technology.ncodeGroup" />
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G" />
-        </action>
 
         <!-- Explain -->
         <action id="com.technology.ncode.AskAQuestion.DisplayQuestionToolWindowContent"
