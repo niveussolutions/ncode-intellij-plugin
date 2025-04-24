@@ -226,7 +226,14 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                             }
                             WriteCommandAction.runWriteCommandAction(editor.getProject(), () -> {
                                 try {
-                                    // Insert the completion text at the caret
+                                    // Check if the offset is still valid
+                                    int currentOffset = editor.getCaretModel().getOffset();
+                                    if (currentOffset != offset) {
+                                        LOG.debug("Caret position changed from " + offset + " to " + currentOffset
+                                                + ". Updating insertion point.");
+                                    }
+
+                                    // Always use the current caret position instead of the stored offset
                                     Document document = editor.getDocument();
 
                                     // Temporarily remove document listener to avoid recursive triggering
@@ -234,7 +241,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                                         document.removeDocumentListener(documentListener);
                                     }
 
-                                    document.insertString(offset, generatedText);
+                                    document.insertString(currentOffset, generatedText);
 
                                     // Re-add document listener
                                     if (documentListener != null) {
@@ -244,20 +251,21 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                                     // Reset the metrics reported flag for this new suggestion
                                     metricsReported.set(false);
 
-                                    // Apply transparent highlighting
-                                    RangeHighlighter highlighter = applyTransparentHighlighting(editor, offset,
-                                            offset + generatedText.length());
+                                    // Apply transparent highlighting using the current offset
+                                    RangeHighlighter highlighter = applyTransparentHighlighting(editor, currentOffset,
+                                            currentOffset + generatedText.length());
 
-                                    // Install custom action for tab
-                                    AnAction tabAction = installTabCompletionAction(editor, offset, generatedText);
+                                    // Install custom action for tab with the current offset
+                                    AnAction tabAction = installTabCompletionAction(editor, currentOffset,
+                                            generatedText);
 
-                                    // Install the key listener for handling other keys
-                                    installKeyListener(editor, offset, generatedText);
+                                    // Install the key listener for handling other keys with the current offset
+                                    installKeyListener(editor, currentOffset, generatedText);
 
-                                    // Store the completion state
+                                    // Store the completion state with the updated offset
                                     completionState = new CompletionState(
                                             generatedText,
-                                            offset,
+                                            currentOffset,
                                             highlighter,
                                             tabAction);
                                 } catch (Exception e) {
@@ -398,6 +406,9 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
 
                 WriteCommandAction.runWriteCommandAction(project, () -> {
                     try {
+                        // Get the current offset from completionState to ensure we're using the latest
+                        int currentOffset = completionState != null ? completionState.offset : offset;
+
                         Document document = editor.getDocument();
 
                         // Temporarily remove document listener to avoid recursive triggering
@@ -405,9 +416,9 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                             document.removeDocumentListener(documentListener);
                         }
 
-                        int endOffset = offset + generatedText.length();
+                        int endOffset = currentOffset + generatedText.length();
                         if (endOffset <= document.getTextLength()) {
-                            document.deleteString(offset, endOffset);
+                            document.deleteString(currentOffset, endOffset);
                         }
 
                         // Re-add document listener
