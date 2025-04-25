@@ -55,8 +55,8 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
     private static final Logger LOG = Logger.getInstance(NCodeInlineCompletionProvider.class);
 
     // Configuration constants
-    private static final int DEBOUNCE_DELAY_MS = 1000;
-    private static final int TOP_CONTEXT_LINES = 10;
+    private static final int DEBOUNCE_DELAY_MS = 3000;
+    private static final int TOP_CONTEXT_LINES = 5;
     private static final int BOTTOM_CONTEXT_LINES = 5;
     private static final int HIGHLIGHTING_ALPHA = 40;
     private static final int FOREGROUND_ALPHA = 180;
