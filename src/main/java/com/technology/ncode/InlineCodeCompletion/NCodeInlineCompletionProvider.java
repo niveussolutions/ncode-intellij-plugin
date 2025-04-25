@@ -55,15 +55,15 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
     private static final Logger LOG = Logger.getInstance(NCodeInlineCompletionProvider.class);
 
     // Configuration constants
-    private static final int DEBOUNCE_DELAY_MS = 2000;
-    private static final int TOP_CONTEXT_LINES = 10;
+    private static final int DEBOUNCE_DELAY_MS = 3000;
+    private static final int TOP_CONTEXT_LINES = 5;
     private static final int BOTTOM_CONTEXT_LINES = 5;
     private static final int HIGHLIGHTING_ALPHA = 40;
     private static final int FOREGROUND_ALPHA = 180;
     private static final int FALLBACK_BG_RED = 200;
     private static final int FALLBACK_BG_GREEN = 200;
     private static final int FALLBACK_BG_BLUE = 200;
-    private static final int COOLDOWN_AFTER_ACCEPT_MS = 1000;
+    private static final int COOLDOWN_AFTER_ACCEPT_MS = 5000;
 
     // Use IntelliJ's executor service for better integration with the platform
     private final ScheduledExecutorService scheduler = AppExecutorUtil.getAppScheduledExecutorService();
@@ -209,55 +209,61 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
 
         InlineVertexAi inlineVertexAi = new InlineVertexAi();
         try {
+            // Get the completion asynchronously
             ApiFuture<GenerateContentResponse> future = inlineVertexAi.generateContentAsync(surroundingLines);
 
-            // Handle the future response asynchronously
-            ListenableFuture<GenerateContentResponse> listenableFuture = Futures.immediateFuture(future.get());
-            Futures.addCallback(listenableFuture, new FutureCallback<GenerateContentResponse>() {
-                @Override
-                public void onSuccess(GenerateContentResponse response) {
+            // Execute this in a background thread to avoid blocking EDT
+            AppExecutorUtil.getAppExecutorService().submit(() -> {
+                try {
+                    // Get the result - this might block, but we're on a background thread
+                    GenerateContentResponse response = future.get();
                     String generatedText = InlineVertexAi.extractGeneratedText(response);
 
                     if (generatedText != null && !generatedText.isEmpty()) {
-                        // Schedule modifications on the EDT and wrap them in a write action
+                        // Schedule modifications on the EDT
                         ApplicationManager.getApplication().invokeLater(() -> {
-                            if (editor.isDisposed()) {
+                            if (editor.isDisposed() || editor.getProject() == null
+                                    || editor.getProject().isDisposed()) {
                                 return;
                             }
+
+                            // Get the current caret position - it might have changed
+                            int currentOffset = editor.getCaretModel().getOffset();
+
                             WriteCommandAction.runWriteCommandAction(editor.getProject(), () -> {
                                 try {
-                                    // Insert the completion text at the caret
                                     Document document = editor.getDocument();
 
-                                    // Temporarily remove document listener to avoid recursive triggering
+                                    // Temporarily remove document listener
                                     if (documentListener != null) {
                                         document.removeDocumentListener(documentListener);
                                     }
 
-                                    document.insertString(offset, generatedText);
+                                    document.insertString(currentOffset, generatedText);
 
                                     // Re-add document listener
                                     if (documentListener != null) {
                                         document.addDocumentListener(documentListener);
                                     }
 
-                                    // Reset the metrics reported flag for this new suggestion
+                                    // Reset metrics flag
                                     metricsReported.set(false);
 
-                                    // Apply transparent highlighting
-                                    RangeHighlighter highlighter = applyTransparentHighlighting(editor, offset,
-                                            offset + generatedText.length());
+                                    // Apply highlighting with current position
+                                    RangeHighlighter highlighter = applyTransparentHighlighting(editor, currentOffset,
+                                            currentOffset + generatedText.length());
 
-                                    // Install custom action for tab
-                                    AnAction tabAction = installTabCompletionAction(editor, offset, generatedText);
+                                    // Install tab action with current position
+                                    AnAction tabAction = installTabCompletionAction(editor, currentOffset,
+                                            generatedText);
 
-                                    // Install the key listener for handling other keys
-                                    installKeyListener(editor, offset, generatedText);
+                                    // Install key listener with current position
+                                    installKeyListener(editor, currentOffset, generatedText);
 
-                                    // Store the completion state
+                                    // Store completion state
                                     completionState = new CompletionState(
                                             generatedText,
-                                            offset,
+                                            currentOffset,
                                             highlighter,
                                             tabAction);
                                 } catch (Exception e) {
@@ -269,13 +275,10 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                     } else {
                         LOG.warn("No valid completion generated. Raw response: " + response);
                     }
+                } catch (Exception e) {
+                    LOG.error("Error getting completion result", e);
                 }
-
-                @Override
-                public void onFailure(Throwable t) {
-                    LOG.warn("Error calling Vertex AI asynchronously", t);
-                }
-            }, MoreExecutors.directExecutor());
+            });
         } catch (Exception e) {
             LOG.error("Unexpected error during completion generation", e);
         }
@@ -378,7 +381,7 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
             editor.getContentComponent().removeKeyListener(activeKeyListener);
         }
 
-        // Create a new key listener that will handle all keys except tab
+        // Create a new key listener
         activeKeyListener = new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -393,51 +396,58 @@ public class NCodeInlineCompletionProvider extends TypedHandlerDelegate implemen
                     return;
                 }
 
-                // We need to consume the event to prevent it from being processed twice
+                // We need to consume the event to prevent double processing
                 e.consume();
 
-                WriteCommandAction.runWriteCommandAction(project, () -> {
-                    try {
-                        Document document = editor.getDocument();
+                // Get the current offset from completion state
+                int currentOffset = completionState != null ? completionState.offset : offset;
 
-                        // Temporarily remove document listener to avoid recursive triggering
-                        if (documentListener != null) {
-                            document.removeDocumentListener(documentListener);
+                // Use invokeLater to ensure we don't block the key event thread
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    WriteCommandAction.runWriteCommandAction(project, () -> {
+                        try {
+                            Document document = editor.getDocument();
+
+                            // Remove listener temporarily
+                            if (documentListener != null) {
+                                document.removeDocumentListener(documentListener);
+                            }
+
+                            int endOffset = currentOffset + generatedText.length();
+                            if (endOffset <= document.getTextLength()) {
+                                document.deleteString(currentOffset, endOffset);
+                            }
+
+                            // Re-add listener
+                            if (documentListener != null) {
+                                document.addDocumentListener(documentListener);
+                            }
+                        } catch (Exception ex) {
+                            LOG.error("Error removing completion text", ex);
+                        } finally {
+                            // Mark as rejected
+                            cleanupCurrentCompletion(editor, false);
+
+                            // Re-dispatch the key event
+                            KeyEvent newEvent = new KeyEvent(
+                                    e.getComponent(),
+                                    e.getID(),
+                                    e.getWhen(),
+                                    e.getModifiers(),
+                                    e.getKeyCode(),
+                                    e.getKeyChar(),
+                                    e.getKeyLocation());
+
+                            SwingUtilities.invokeLater(() -> {
+                                SwingUtilities.processKeyBindings(newEvent);
+                            });
                         }
-
-                        int endOffset = offset + generatedText.length();
-                        if (endOffset <= document.getTextLength()) {
-                            document.deleteString(offset, endOffset);
-                        }
-
-                        // Re-add document listener
-                        if (documentListener != null) {
-                            document.addDocumentListener(documentListener);
-                        }
-                    } catch (Exception ex) {
-                        LOG.error("Error removing completion text", ex);
-                    } finally {
-                        // Mark suggestion as rejected
-                        cleanupCurrentCompletion(editor, false);
-
-                        // After clearing the suggestion, we should re-dispatch the key event
-                        // to properly handle the key press
-                        KeyEvent newEvent = new KeyEvent(
-                                e.getComponent(),
-                                e.getID(),
-                                e.getWhen(),
-                                e.getModifiers(),
-                                e.getKeyCode(),
-                                e.getKeyChar(),
-                                e.getKeyLocation());
-
-                        SwingUtilities.processKeyBindings(newEvent);
-                    }
+                    });
                 });
             }
         };
 
-        // Add the key listener to the editor component
+        // Add the key listener
         editor.getContentComponent().addKeyListener(activeKeyListener);
     }
 
