@@ -9,6 +9,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import io.github.cdimascio.dotenv.Dotenv;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -19,10 +20,13 @@ import com.intellij.openapi.project.Project;
  */
 public class UsageMetricsReporter {
     private static final Logger LOG = Logger.getInstance(UsageMetricsReporter.class);
-    private static final String API_URL = "https://ncode-analytics-be.ns-devsecops.com/api/usageMetrics";
-    private static final String USAGE_METRICS_SECRET_KEY = "4a44d856f7bc6f9e4c37a3d3b6c383b71ee0720fc56df5";
     private static final String EXTENSION_TYPE = determineExtensionType();
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
+
+    private static final Dotenv dotenv = Dotenv.configure()
+            .directory("/home/niveus/Documents/projects/temp-fix/ncode-intellij-extension").ignoreIfMissing().load();
+    private static final String API_URL = dotenv.get("USAGE_METRC_API_URL");
+    private static final String USAGE_METRICS_SECRET_KEY = dotenv.get("USAGE_METRICS_SECRET_KEY");
 
     // Singleton HTTP client for better performance
     private static final HttpClient httpClient = HttpClient.newBuilder()
@@ -132,9 +136,6 @@ public class UsageMetricsReporter {
                 EXTENSION_TYPE,
                 linesOfCodeSuggested,
                 linesOfCodeAccepted);
-
-        System.out.println("Sending metrics to: " + API_URL);
-        System.out.println("Payload: " + jsonPayload);
 
         // Create the HTTP request
         HttpRequest request = HttpRequest.newBuilder()
