@@ -137,9 +137,6 @@ public class UsageMetricsReporter {
                 linesOfCodeSuggested,
                 linesOfCodeAccepted);
 
-        System.out.println("Sending metrics to: " + API_URL);
-        System.out.println("Payload: " + jsonPayload);
-
         // Create the HTTP request
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(API_URL))
