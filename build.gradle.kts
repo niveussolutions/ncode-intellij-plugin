@@ -44,6 +44,7 @@ dependencies {
     implementation("com.fifesoft:rsyntaxtextarea:3.3.2")
     implementation("de.sciss:jsyntaxpane:1.0.0")
     implementation("de.sciss:syntaxpane:1.1.1")
+    implementation("io.github.cdimascio:dotenv-java:3.0.0")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
