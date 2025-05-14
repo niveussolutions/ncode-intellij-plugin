@@ -8,9 +8,9 @@ public class EnvironmentConfig {
 //    Dotenv.configure().ignoreIfMissing().load();
 
     // Google Cloud/Vertex AI
-    public static final String VERTEX_PROJECT_ID = dotenv.get("VERTEX_PROJECT_ID", "niveus-ncode");
-    public static final String VERTEX_LOCATION = dotenv.get("VERTEX_LOCATION", "us-central1");
-    public static final String VERTEX_MODEL_ID = dotenv.get("VERTEX_MODEL_ID", "gemini-2.0-flash");
+    public static final String VERTEX_PROJECT_ID = dotenv.get("VERTEX_PROJECT_ID");
+    public static final String VERTEX_LOCATION = dotenv.get("VERTEX_LOCATION");
+    public static final String VERTEX_MODEL_ID = dotenv.get("VERTEX_MODEL_ID");
     
     // Usage metrics
     public static final String USAGE_METRICS_API_URL = dotenv.get("USAGE_METRICS_API_URL");
