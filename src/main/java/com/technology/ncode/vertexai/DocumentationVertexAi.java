@@ -11,10 +11,12 @@ import com.google.cloud.vertexai.api.GenerationConfig;
 import com.google.cloud.vertexai.api.Part;
 import com.google.cloud.vertexai.generativeai.ContentMaker;
 import com.google.cloud.vertexai.generativeai.GenerativeModel;
+import com.technology.ncode.config.EnvironmentConfig;
 
 public class DocumentationVertexAi {
-    private static final String PROJECT_ID = "niveus-ncode";
-    private static final String LOCATION = "us-central1";
+    private static final String PROJECT_ID = EnvironmentConfig.VERTEX_PROJECT_ID;
+    private static final String LOCATION = EnvironmentConfig.VERTEX_LOCATION;
+    private static final String MODEL_ID = EnvironmentConfig.VERTEX_MODEL_ID;
 
     private static final String SYSTEM_PROMPT = """
             You are an expert documentation generator. Given code, provide comprehensive documentation in Markdown format.
@@ -51,7 +53,7 @@ public class DocumentationVertexAi {
                     .build();
 
             GenerativeModel model = new GenerativeModel.Builder()
-                    .setModelName("gemini-2.0-flash")
+                    .setModelName(MODEL_ID)
                     .setVertexAi(vertexAi)
                     .setGenerationConfig(generationConfig)
                     .setSystemInstruction(ContentMaker.fromString(SYSTEM_PROMPT))

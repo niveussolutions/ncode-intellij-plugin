@@ -11,10 +11,16 @@ import com.google.cloud.vertexai.api.GenerationConfig;
 import com.google.cloud.vertexai.api.Part;
 import com.google.cloud.vertexai.generativeai.ContentMaker;
 import com.google.cloud.vertexai.generativeai.GenerativeModel;
+import com.technology.ncode.config.EnvironmentConfig;
 
 public class AskAQuestionVertexAi {
-    private static final String PROJECT_ID = "niveus-ncode";
-    private static final String LOCATION = "us-central1";
+    private static final String PROJECT_ID = EnvironmentConfig.VERTEX_PROJECT_ID;
+    static{
+        System.out.println("PROJECT_ID (env testttt): " + PROJECT_ID);
+    }
+
+    private static final String LOCATION = EnvironmentConfig.VERTEX_LOCATION;
+    private static final String MODEL_ID = EnvironmentConfig.VERTEX_MODEL_ID;
 
     public GenerateContentResponse generateContent(String prompt) throws IOException {
         if (prompt == null || prompt.trim().isEmpty()) {
@@ -30,7 +36,7 @@ public class AskAQuestionVertexAi {
                     .build();
 
             GenerativeModel model = new GenerativeModel.Builder()
-                    .setModelName("gemini-2.0-flash")
+                    .setModelName(MODEL_ID)
                     .setVertexAi(vertexAi)
                     .setGenerationConfig(generationConfig)
                     .build();
