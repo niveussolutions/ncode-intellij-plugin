@@ -1,4 +1,4 @@
-package com.technology.ncode.VertexAI;
+package com.technology.ncode.vertexai;
 
 import java.io.IOException;
 import java.util.List;

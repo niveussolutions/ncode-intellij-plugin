@@ -1,4 +1,4 @@
-package com.technology.ncode.VertexAI;
+package com.technology.ncode.vertexai;
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.vertexai.VertexAI;
@@ -6,9 +6,7 @@ import com.google.cloud.vertexai.api.Candidate;
 import com.google.cloud.vertexai.api.Content;
 import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.google.cloud.vertexai.api.Part;
-import com.google.cloud.vertexai.generativeai.ContentMaker;
 import com.google.cloud.vertexai.generativeai.GenerativeModel;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.Mockito;
@@ -17,7 +15,6 @@ import java.io.IOException;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 class InlineVertexAiTest {

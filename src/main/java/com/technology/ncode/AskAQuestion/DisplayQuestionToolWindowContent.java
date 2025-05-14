@@ -53,7 +53,7 @@ import javax.swing.text.html.HTMLEditorKit;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.technology.ncode.UsageMetricsReporter;
-import com.technology.ncode.VertexAI.AskAQuestionVertexAi;
+import com.technology.ncode.vertexai.AskAQuestionVertexAi;
 import com.vladsch.flexmark.ast.BulletList;
 import com.vladsch.flexmark.ast.FencedCodeBlock;
 import com.vladsch.flexmark.ast.ListItem;

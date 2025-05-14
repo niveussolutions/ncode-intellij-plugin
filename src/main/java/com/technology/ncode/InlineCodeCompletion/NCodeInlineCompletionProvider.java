@@ -23,7 +23,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiFile;
 import com.intellij.util.concurrency.AppExecutorUtil;
-import com.technology.ncode.VertexAI.InlineVertexAi;
+import com.technology.ncode.vertexai.InlineVertexAi;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -40,10 +40,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.technology.ncode.UsageMetricsReporter;
 
 /**

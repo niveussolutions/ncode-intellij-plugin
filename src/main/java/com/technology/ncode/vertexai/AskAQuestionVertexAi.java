@@ -1,4 +1,4 @@
-package com.technology.ncode.VertexAI;
+package com.technology.ncode.vertexai;
 
 import java.io.IOException;
 import java.util.List;
@@ -9,16 +9,11 @@ import com.google.cloud.vertexai.api.Content;
 import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.google.cloud.vertexai.api.GenerationConfig;
 import com.google.cloud.vertexai.api.Part;
-import com.google.cloud.vertexai.generativeai.ContentMaker;
 import com.google.cloud.vertexai.generativeai.GenerativeModel;
 import com.technology.ncode.config.EnvironmentConfig;
 
 public class AskAQuestionVertexAi {
     private static final String PROJECT_ID = EnvironmentConfig.VERTEX_PROJECT_ID;
-    static{
-        System.out.println("PROJECT_ID (env testttt): " + PROJECT_ID);
-    }
-
     private static final String LOCATION = EnvironmentConfig.VERTEX_LOCATION;
     private static final String MODEL_ID = EnvironmentConfig.VERTEX_MODEL_ID;
 

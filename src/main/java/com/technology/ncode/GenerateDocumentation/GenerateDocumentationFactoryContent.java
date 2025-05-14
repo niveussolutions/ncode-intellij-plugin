@@ -48,7 +48,7 @@ import javax.swing.text.StyledDocument;
 import com.google.cloud.vertexai.api.GenerateContentResponse;
 import com.intellij.openapi.project.Project;
 import com.technology.ncode.UsageMetricsReporter;
-import com.technology.ncode.VertexAI.DocumentationVertexAi;
+import com.technology.ncode.vertexai.DocumentationVertexAi;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.data.MutableDataSet;

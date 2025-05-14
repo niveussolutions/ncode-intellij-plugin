@@ -50,7 +50,7 @@ import javax.swing.text.StyledDocument;
 
 import com.intellij.openapi.project.Project;
 import com.technology.ncode.UsageMetricsReporter;
-import com.technology.ncode.VertexAI.TestCaseCodeVertexAi;
+import com.technology.ncode.vertexai.TestCaseCodeVertexAi;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.data.MutableDataSet;

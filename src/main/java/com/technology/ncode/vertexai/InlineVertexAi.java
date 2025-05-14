@@ -1,4 +1,4 @@
-package com.technology.ncode.VertexAI;
+package com.technology.ncode.vertexai;
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.vertexai.VertexAI;
@@ -12,7 +12,6 @@ import com.google.cloud.vertexai.api.Part;
 import com.technology.ncode.config.EnvironmentConfig;
 
 import java.io.IOException;
-import java.util.List;
 
 public class InlineVertexAi {
     private static final String PROJECT_ID = EnvironmentConfig.VERTEX_PROJECT_ID;

@@ -1,4 +1,4 @@
-package com.technology.ncode.VertexAI;
+package com.technology.ncode.vertexai;
 
 import com.google.cloud.vertexai.VertexAI;
 import com.google.cloud.vertexai.api.Candidate;
@@ -13,7 +13,6 @@ import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;

@@ -14,17 +14,17 @@ sonarqube {
     properties {
         property("sonar.projectKey", "intellij-plugin")
         property("sonar.projectName", "intellij-plugin")
-        property("sonar.host.url", "https://sonar.niveussolutions.com")
-        property("sonar.token", "sqp_d357bc7703283a6dd6065e9702d893faef9a0ab9")
+        property("sonar.host.url", "SONAR_HOST_URL")
+        property("sonar.token", "SONAR_TOKEN")
         property("sonar.java.binaries", "${project.buildDir}/classes/java/main")
         property("sonar.junit.reportPaths", "${project.buildDir}/test-results/test")
         property("sonar.coverage.jacoco.xmlReportPaths", "${project.buildDir}/reports/jacoco/test/jacocoTestReport.xml")
-        property("sonar.sources", "src/main/java/com/technology/ncode/VertexAI")
-        property("sonar.tests", "src/test/java/com/technology/ncode/VertexAI")
+        property("sonar.sources", "src/main/java/com/technology/ncode/vertexai")
+        property("sonar.tests", "src/test/java/com/technology/ncode/vertexai")
         property("sonar.java.test.binaries", "${project.buildDir}/classes/java/test")
         property("sonar.coverage.exclusions", "**/generated/**,**/*Form.java,**/*Dialog.java,**/AskAQuestion/**,**/GenerateDocumentation/**,**/GenerateTest/**,**/GoogleThis/**,**/InlineCodeCompletion/**,**/VertexAIChatbot.java")
         property("sonar.verbose", "true")
-        property("sonar.inclusions", "**/VertexAI/**")
+        property("sonar.inclusions", "**/vertexai/**")
     }
 }
 
@@ -100,7 +100,7 @@ tasks {
         }
         
         classDirectories.setFrom(sourceSets.main.get().output.asFileTree.matching {
-            include("**/VertexAI/**")
+            include("**/vertexai/**")
             exclude(
                 "**/test/**",
                 "**/generated/**",

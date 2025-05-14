@@ -9,10 +9,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import io.github.cdimascio.dotenv.Dotenv;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
+import com.technology.ncode.config.EnvironmentConfig;
 
 /**
  * Handles reporting usage metrics to the backend server.
@@ -23,11 +23,12 @@ public class UsageMetricsReporter {
     private static final String EXTENSION_TYPE = determineExtensionType();
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
-    private static final Dotenv dotenv = Dotenv.configure()
-            .directory("/home/niveus/Documents/projects/temp-fix/ncode-intellij-extension").ignoreIfMissing().load();
-    private static final String API_URL = dotenv.get("USAGE_METRC_API_URL");
-    private static final String USAGE_METRICS_SECRET_KEY = dotenv.get("USAGE_METRICS_SECRET_KEY");
-
+    private static final String API_URL = EnvironmentConfig.USAGE_METRICS_API_URL;
+    private static final String USAGE_METRICS_SECRET_KEY = EnvironmentConfig.USAGE_METRICS_SECRET_KEY;
+    static{
+        System.out.println("API_URL (env usagemetric): " + API_URL);
+        System.out.println("USAGE_METRICS_SECRET_KEY (env usagemetric): " + USAGE_METRICS_SECRET_KEY);
+    }
     // Singleton HTTP client for better performance
     private static final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(TIMEOUT)
@@ -167,8 +168,7 @@ public class UsageMetricsReporter {
      * @return A MetricsUserInfo object containing the email and project ID
      */
     public static MetricsUserInfo getUserInfo() {
-        // Hardcode the project ID to "niveus-ncode"
-        String projectId = "niveus-ncode";
+        String projectId = EnvironmentConfig.VERTEX_PROJECT_ID;
 
         // Get the email from "gcloud auth list"
         String email = getEmailFromGcloudAuthList();
