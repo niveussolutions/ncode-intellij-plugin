@@ -29,7 +29,7 @@ sonarqube {
 }
 
 group = "com.technology"
-version = "5.2-SNAPSHOT"
+version = "5.1-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -69,7 +69,7 @@ tasks {
     }
 
     patchPluginXml {
-        sinceBuild.set("221.0")
+        sinceBuild.set("241.0")
         untilBuild.set("251.*")
     }
 
